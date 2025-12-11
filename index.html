@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>3連単ゲーム - ホーム</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    label { display: block; margin: 10px 0 5px; }
+    input[type="number"] { width: 80px; }
+    .player-list { margin-top: 20px; }
+    .player-item { margin: 4px 0; }
+    button { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>3連単ゲーム ホーム</h1>
+
+  <div>
+    <label for="playerCount">参加プレイヤー人数</label>
+    <input type="number" id="playerCount" min="1" max="20" value="3">
+    <button id="savePlayerCount">人数を確定</button>
+  </div>
+
+  <div>
+    <label for="maxTotal">合計数字の上限値</label>
+    <input type="number" id="maxTotal" min="1" value="100">
+    <button id="saveMaxTotal">上限を確定</button>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <strong>現在の合計値：</strong>
+    <span id="currentTotal">-</span>
+    <span id="maxTotalLabel"></span>
+  </div>
+
+  <div class="player-list" id="playerList"></div>
+
+  <div style="margin-top: 20px;">
+    <button id="resetBtn">リセット（全員5に戻す）</button>
+  </div>
+
+  <script>
+    const DEFAULT_VALUE = 5;
+    const PLAYER_COUNT_KEY = "playerCount";
+    const MAX_TOTAL_KEY = "maxTotal";
+
+    function getPlayerValue(playerId) {
+      const key = "player_" + playerId + "_value";
+      const stored = localStorage.getItem(key);
+      if (stored === null) return DEFAULT_VALUE;
+      return parseInt(stored, 10);
+    }
+
+    function setPlayerValue(playerId, value) {
+      const key = "player_" + playerId + "_value";
+      localStorage.setItem(key, String(value));
+    }
+
+    function loadSettings() {
+      const storedCount = localStorage.getItem(PLAYER_COUNT_KEY);
+      if (storedCount !== null) {
+        document.getElementById("playerCount").value = storedCount;
+      }
+      const storedMax = localStorage.getItem(MAX_TOTAL_KEY);
+      if (storedMax !== null) {
+        document.getElementById("maxTotal").value = storedMax;
+      }
+    }
+
+    function savePlayerCount() {
+      const count = parseInt(document.getElementById("playerCount").value, 10);
+      if (isNaN(count) || count < 1) {
+        alert("プレイヤー人数は1以上の数値を入力してください。");
+        return;
+      }
+      localStorage.setItem(PLAYER_COUNT_KEY, String(count));
+      renderPlayers();
+    }
+
+    function saveMaxTotal() {
+      const max = parseInt(document.getElementById("maxTotal").value, 10);
+      if (isNaN(max) || max < 1) {
+        alert("上限値は1以上の数値を入力してください。");
+        return;
+      }
+      localStorage.setItem(MAX_TOTAL_KEY, String(max));
+      updateTotalDisplay();
+    }
+
+    function renderPlayers() {
+      const list = document.getElementById("playerList");
+      list.innerHTML = "";
+
+      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+
+      for (let i = 1; i <= count; i++) {
+        const value = getPlayerValue(i);
+        const div = document.createElement("div");
+        div.className = "player-item";
+        div.innerHTML = `
+          プレイヤー${i}：<strong>${value}</strong>
+          （<a href="${i}.html" target="_blank">詳細ページへ</a>）
+        `;
+        list.appendChild(div);
+      }
+      updateTotalDisplay();
+    }
+
+    function updateTotalDisplay() {
+      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+      let total = 0;
+      for (let i = 1; i <= count; i++) {
+        total += getPlayerValue(i);
+      }
+      const currentTotalEl = document.getElementById("currentTotal");
+      currentTotalEl.textContent = total;
+
+      const maxTotal = parseInt(localStorage.getItem(MAX_TOTAL_KEY) || "100", 10);
+      document.getElementById("maxTotalLabel").textContent = `(上限: ${maxTotal})`;
+
+      if (total > maxTotal) {
+        currentTotalEl.style.color = "red";
+      } else {
+        currentTotalEl.style.color = "black";
+      }
+    }
+
+    function resetAllPlayers() {
+      if (!confirm("全プレイヤーの値を5に戻します。よろしいですか？")) {
+        return;
+      }
+      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+      for (let i = 1; i <= count; i++) {
+        setPlayerValue(i, DEFAULT_VALUE);
+      }
+      renderPlayers();
+      alert("リセットしました。");
+    }
+
+    document.getElementById("savePlayerCount").addEventListener("click", savePlayerCount);
+    document.getElementById("saveMaxTotal").addEventListener("click", saveMaxTotal);
+    document.getElementById("resetBtn").addEventListener("click", resetAllPlayers);
+
+    loadSettings();
+    renderPlayers();
+  </script>
+</body>
+</html>

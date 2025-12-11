@@ -6,32 +6,37 @@
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
-      background: #111;
-      color: #f5f5f5;
+      background: #0b3d0b; /* 芝のような深い緑 */
+      color: #fff;
       padding: 20px;
       text-align: center;
     }
 
     h1 {
-      color: #ffd700;
+      font-size: 2.2em;
+      color: #ffeb3b;
+      text-shadow: 0 0 10px #ffeb3b;
       margin-bottom: 20px;
-      text-shadow: 0 0 10px #ffd700;
+      font-weight: bold;
+      letter-spacing: 2px;
     }
 
     .section {
-      background: #222;
+      background: rgba(0, 0, 0, 0.4);
       padding: 15px;
       margin: 15px auto;
       border-radius: 10px;
       width: 90%;
       max-width: 500px;
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+      border: 2px solid #ffeb3b;
+      box-shadow: 0 0 10px rgba(255, 235, 59, 0.4);
     }
 
     label {
       display: block;
       margin: 10px 0 5px;
       font-size: 1.1em;
+      font-weight: bold;
     }
 
     input[type="number"] {
@@ -49,30 +54,33 @@
       font-size: 1.1em;
       border: none;
       border-radius: 8px;
-      background: #ffd700;
+      background: #ffeb3b;
       color: #000;
       font-weight: bold;
       cursor: pointer;
-      box-shadow: 0 0 10px #ffd700;
+      box-shadow: 0 0 10px #ffeb3b;
     }
 
     button:hover {
-      background: #ffea70;
+      background: #fff176;
     }
 
     .player-card {
-      background: #333;
+      background: #1b5e20;
       padding: 12px;
       margin: 10px auto;
       border-radius: 8px;
       width: 85%;
       max-width: 450px;
+      border-left: 6px solid #ffeb3b; /* 馬柱風のライン */
       box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
-      font-size: 1.1em;
+      font-size: 1.2em;
+      text-align: left;
+      padding-left: 20px;
     }
 
     a {
-      color: #ffd700;
+      color: #ffeb3b;
       text-decoration: none;
       font-weight: bold;
     }
@@ -82,15 +90,15 @@
     }
 
     #currentTotal {
-      font-size: 1.4em;
+      font-size: 1.6em;
       font-weight: bold;
-      color: #ffd700;
+      color: #ffeb3b;
     }
   </style>
 </head>
 <body>
 
-  <h1>3連単ゲーム</h1>
+  <h1>🏇 3連単ゲーム</h1>
 
   <div class="section">
     <label>参加プレイヤー人数</label>
@@ -173,8 +181,7 @@
         const div = document.createElement("div");
         div.className = "player-card";
         div.innerHTML = `
-          プレイヤー${i}  
-          <br>
+          <strong>プレイヤー${i}</strong><br>
           <a href="${i}.html" target="_blank">▶ 詳細ページへ</a>
         `;
         list.appendChild(div);
@@ -194,7 +201,7 @@
       const maxTotal = parseInt(localStorage.getItem(MAX_TOTAL_KEY) || "100", 10);
       document.getElementById("maxTotalLabel").textContent = `上限：${maxTotal}`;
 
-      currentTotalEl.style.color = total > maxTotal ? "red" : "#ffd700";
+      currentTotalEl.style.color = total > maxTotal ? "red" : "#ffeb3b";
     }
 
     function resetAllPlayers() {

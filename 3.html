@@ -67,8 +67,11 @@
       box-shadow: 0 0 10px #ffeb3b;
     }
 
-    button:hover {
-      background: #fff176;
+    button:disabled {
+      background: #777;
+      color: #333;
+      box-shadow: none;
+      cursor: not-allowed;
     }
 
     .closing-msg {
@@ -101,7 +104,7 @@
   </div>
 
   <div class="closing-msg" id="closingMsg">
-    変更を保存しました。5秒後に画面を閉じます…
+    入力を保存しました。5秒後にタブを閉じます…
   </div>
 
   <script>
@@ -112,8 +115,7 @@
     function getPlayerValue(playerId) {
       const key = "player_" + playerId + "_value";
       const stored = localStorage.getItem(key);
-      if (stored === null) return DEFAULT_VALUE;
-      return parseInt(stored, 10);
+      return stored ? parseInt(stored, 10) : DEFAULT_VALUE;
     }
 
     function setPlayerValue(playerId, value) {
@@ -129,35 +131,41 @@
     function calcRank() {
       const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
       const values = [];
+
       for (let i = 1; i <= count; i++) {
         values.push(getPlayerValue(i));
       }
+
       const sorted = [...values].sort((a, b) => b - a);
       const myValue = getPlayerValue(PLAYER_ID);
-      const index = sorted.indexOf(myValue);
-      const rank = index + 1;
+      const rank = sorted.indexOf(myValue) + 1;
 
       document.getElementById("currentRank").textContent =
         `${rank} 位 / ${count} 人`;
     }
 
-    function updateAndRank() {
-      loadPlayerValue();
-      calcRank();
+    function disableButtons() {
+      document.querySelectorAll("button[data-diff]").forEach(btn => {
+        btn.disabled = true;
+      });
     }
 
     function scheduleCloseTab() {
       document.getElementById("closingMsg").style.display = "block";
-      setTimeout(() => {
-        window.close();
-      }, 5000);
+      setTimeout(() => window.close(), 5000);
     }
 
     function onButtonClick(diff) {
+      disableButtons(); // ✅ 1回押したらすべて無効
+
       const current = getPlayerValue(PLAYER_ID);
       const next = current + diff;
+
       setPlayerValue(PLAYER_ID, next);
-      updateAndRank();
+
+      // ✅ 値は更新するが順位は更新しない
+      document.getElementById("currentValue").textContent = next;
+
       scheduleCloseTab();
     }
 
@@ -167,6 +175,14 @@
         onButtonClick(diff);
       });
     });
+
+    // 初期表示（順位は最初だけ計算）
+    loadPlayerValue();
+    calcRank();
+  </script>
+
+</body>
+</html>
 
     updateAndRank();
   </script>

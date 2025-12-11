@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>プレイヤー4</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #0b3d0b;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .player-badge {
+      display: inline-block;
+      background: #ffeb3b;
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-size: 1.6em;
+      font-weight: bold;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px #ffeb3b;
+    }
+
+    .value-box {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 15px;
+      margin: 15px auto;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      border: 2px solid #ffeb3b;
+      box-shadow: 0 0 10px rgba(255, 235, 59, 0.4);
+      font-size: 1.3em;
+    }
+
+    #currentValue {
+      font-size: 2em;
+      color: #ffeb3b;
+      font-weight: bold;
+    }
+
+    #currentRank {
+      font-size: 1.5em;
+      color: #ffeb3b;
+      font-weight: bold;
+      margin-top: 10px;
+      text-shadow: 0 0 8px #ffeb3b;
+    }
+
+    .btn-area {
+      margin-top: 20px;
+    }
+
+    button {
+      margin: 8px;
+      padding: 12px 20px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 8px;
+      background: #ffeb3b;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ffeb3b;
+    }
+
+    button:hover {
+      background: #fff176;
+    }
+
+    .closing-msg {
+      margin-top: 20px;
+      font-size: 1.1em;
+      color: #ffeb3b;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="player-badge">プレイヤー 4</div>
+
+  <div class="value-box">
+    <p>現在の値：</p>
+    <div id="currentValue">-</div>
+
+    <p>順位：</p>
+    <div id="currentRank">-</div>
+  </div>
+
+  <div class="btn-area">
+    <button data-diff="-3">-3</button>
+    <button data-diff="-2">-2</button>
+    <button data-diff="-1">-1</button>
+    <button data-diff="1">+1</button>
+    <button data-diff="3">+3</button>
+    <button data-diff="10">+10</button>
+  </div>
+
+  <div class="closing-msg" id="closingMsg">
+    変更を保存しました。5秒後に画面を閉じます…
+  </div>
+
+  <script>
+    const PLAYER_ID = 4;  // ← プレイヤー番号
+    const DEFAULT_VALUE = 5;
+    const PLAYER_COUNT_KEY = "playerCount";
+
+    function getPlayerValue(playerId) {
+      const key = "player_" + playerId + "_value";
+      const stored = localStorage.getItem(key);
+      if (stored === null) return DEFAULT_VALUE;
+      return parseInt(stored, 10);
+    }
+
+    function setPlayerValue(playerId, value) {
+      const key = "player_" + playerId + "_value";
+      localStorage.setItem(key, String(value));
+    }
+
+    function loadPlayerValue() {
+      const value = getPlayerValue(PLAYER_ID);
+      document.getElementById("currentValue").textContent = value;
+    }
+
+    function calcRank() {
+      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+      const values = [];
+      for (let i = 1; i <= count; i++) {
+        values.push(getPlayerValue(i));
+      }
+      const sorted = [...values].sort((a, b) => b - a);
+      const myValue = getPlayerValue(PLAYER_ID);
+      const index = sorted.indexOf(myValue);
+      const rank = index + 1;
+
+      document.getElementById("currentRank").textContent =
+        `${rank} 位 / ${count} 人`;
+    }
+
+    function updateAndRank() {
+      loadPlayerValue();
+      calcRank();
+    }
+
+    function scheduleCloseTab() {
+      document.getElementById("closingMsg").style.display = "block";
+      setTimeout(() => {
+        window.close();
+      }, 5000);
+    }
+
+    function onButtonClick(diff) {
+      const current = getPlayerValue(PLAYER_ID);
+      const next = current + diff;
+      setPlayerValue(PLAYER_ID, next);
+      updateAndRank();
+      scheduleCloseTab();
+    }
+
+    document.querySelectorAll("button[data-diff]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const diff = parseInt(btn.getAttribute("data-diff"), 10);
+        onButtonClick(diff);
+      });
+    });
+
+    updateAndRank();
+  </script>
+
+</body>
+</html>

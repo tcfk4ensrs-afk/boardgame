@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>全員の結果一覧</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #000;
+      color: #ffeb3b;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px #ffeb3b;
+      letter-spacing: 2px;
+    }
+
+    .board {
+      width: 95%;
+      max-width: 600px;
+      margin: 0 auto;
+      background: #111;
+      border: 3px solid #ffeb3b;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 15px rgba(255, 235, 59, 0.5);
+    }
+
+    .item {
+      border-bottom: 1px solid #555;
+      padding: 12px 5px;
+      text-align: left;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: show 0.6s forwards;
+    }
+
+    .item:nth-child(1) { animation-delay: 0.1s; }
+    .item:nth-child(2) { animation-delay: 0.2s; }
+    .item:nth-child(3) { animation-delay: 0.3s; }
+    .item:nth-child(4) { animation-delay: 0.4s; }
+    .item:nth-child(5) { animation-delay: 0.5s; }
+
+    @keyframes show {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hit {
+      color: #ffeb3b;
+      font-weight: bold;
+      text-shadow: 0 0 8px #ffeb3b;
+    }
+
+    .miss {
+      color: #ff5252;
+      font-weight: bold;
+      text-shadow: 0 0 8px #ff5252;
+    }
+
+    .back-btn {
+      margin-top: 25px;
+      padding: 12px 25px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 8px;
+      background: #ffeb3b;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ffeb3b;
+    }
+
+    .back-btn:hover {
+      background: #fff176;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏇 全員の結果一覧</h1>
+
+  <div class="board" id="resultBoard"></div>
+
+  <button class="back-btn" onclick="location.href='index.html'">
+    ホームに戻る
+  </button>
+
+  <script>
+    function getPlayerValue(id) {
+      const v = localStorage.getItem("player_" + id + "_value");
+      return v ? parseInt(v, 10) : 5;
+    }
+
+    function loadAllResults() {
+      const history = JSON.parse(localStorage.getItem("trifecta_history") || "[]");
+      const board = document.getElementById("resultBoard");
+
+      if (history.length === 0) {
+        board.innerHTML = "<p>まだ結果がありません。</p>";
+        return;
+      }
+
+      // 実際の順位を計算
+      const count = parseInt(localStorage.getItem("playerCount") || "3", 10);
+      const values = [];
+      for (let i = 1; i <= count; i++) {
+        values.push({ id: i, value: getPlayerValue(i) });
+      }
+      values.sort((a, b) => b.value - a.value);
+
+      const actual1 = values[0].id;
+      const actual2 = values[1].id;
+      const actual3 = values[2].id;
+
+      // 新しい順に表示
+      board.innerHTML = "";
+      history.slice().reverse().forEach((h, index) => {
+        const hit =
+          h.first == actual1 &&
+          h.second == actual2 &&
+          h.third == actual3;
+
+        const div = document.createElement("div");
+        div.className = "item";
+        div.style.animationDelay = `${0.1 * index}s`;
+
+        div.innerHTML = `
+          <strong>${h.name}</strong><br>
+          予想：${h.first} → ${h.second} → ${h.third}<br>
+          結果：${actual1} → ${actual2} → ${actual3}<br>
+          <span class="${hit ? "hit" : "miss"}">
+            ${hit ? "🎉 的中！" : "❌ ハズレ"}
+          </span>
+        `;
+
+        board.appendChild(div);
+      });
+    }
+
+    loadAllResults();
+  </script>
+
+</body>
+</html>
+
+
+    loadResult();
+  </script>
+
+</body>
+</html>

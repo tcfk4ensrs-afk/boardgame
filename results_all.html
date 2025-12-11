@@ -58,6 +58,12 @@
       text-shadow: 0 0 8px #ff5252;
     }
 
+    .rank-block {
+      margin-top: 10px;
+      font-size: 1.1em;
+      color: #fff;
+    }
+
     .back-btn {
       margin-top: 25px;
       padding: 12px 25px;
@@ -88,20 +94,36 @@
       return v ? parseInt(v, 10) : 5;
     }
 
+    // ✅ 同着対応の最強判定ロジック（result.html と完全同じ）
     function isHitWithTies(pred, actual, values) {
-      const v1 = values.find(v => v.id === actual[0]).value;
-      const v2 = values.find(v => v.id === actual[1]).value;
-      const v3 = values.find(v => v.id === actual[2]).value;
+      const v = {};
+      values.forEach(p => v[p.id] = p.value);
 
-      if (pred[0] !== actual[0]) return false;
+      if (v[actual[0]] === v[actual[1]]) {
+        const setPred = new Set([pred[0], pred[1]]);
+        const setActual = new Set([actual[0], actual[1]]);
+        const ok12 = [...setPred].every(x => setActual.has(x));
+        return ok12 && pred[2] === actual[2];
+      }
 
-      if (v2 === v3) {
+      if (v[actual[1]] === v[actual[2]]) {
+        if (pred[0] !== actual[0]) return false;
         const setPred = new Set([pred[1], pred[2]]);
         const setActual = new Set([actual[1], actual[2]]);
         return [...setPred].every(x => setActual.has(x));
       }
 
-      return pred[1] === actual[1] && pred[2] === actual[2];
+      if (v[actual[0]] === v[actual[1]] && v[actual[1]] === v[actual[2]]) {
+        const setPred = new Set(pred);
+        const setActual = new Set(actual);
+        return [...setPred].every(x => setActual.has(x));
+      }
+
+      return (
+        pred[0] === actual[0] &&
+        pred[1] === actual[1] &&
+        pred[2] === actual[2]
+      );
     }
 
     function loadAllResults() {
@@ -125,6 +147,7 @@
       const actual2 = values[1].id;
       const actual3 = values[2].id;
 
+      const v1 = values[0].value;
       const v2 = values[1].value;
       const v3 = values[2].value;
 
@@ -143,7 +166,14 @@
         div.innerHTML = `
           <strong>${h.name}</strong><br>
           予想：${h.first} → ${h.second} → ${h.third}<br>
-          結果：${actual1} → ${actual2}${v2 === v3 ? "（同着）" : ""} → ${actual3}${v2 === v3 ? "（同着）" : ""}<br>
+
+          <div class="rank-block">
+            <strong>実際の着順</strong><br>
+            1着：${actual1} ${v1===v2 ? "（同着）" : ""}<br>
+            2着：${actual2} ${v2===v3 || v1===v2 ? "（同着）" : ""}<br>
+            3着：${actual3} ${v2===v3 ? "（同着）" : ""}<br>
+          </div>
+
           <span class="${hit ? "hit" : "miss"}">
             ${hit ? "🎉 的中！" : "❌ ハズレ"}
           </span>
@@ -154,13 +184,6 @@
     }
 
     loadAllResults();
-  </script>
-
-</body>
-</html>
-
-
-    loadResult();
   </script>
 
 </body>

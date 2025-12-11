@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>値の変遷一覧</title>
+  <title>値の変遷履歴</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -16,6 +16,7 @@
       font-size: 2em;
       margin-bottom: 20px;
       text-shadow: 0 0 10px #ffeb3b;
+      letter-spacing: 2px;
     }
 
     .player-block {
@@ -25,15 +26,30 @@
       padding: 15px;
       margin: 20px auto;
       width: 95%;
-      max-width: 600px;
+      max-width: 700px;
       box-shadow: 0 0 15px rgba(255, 235, 59, 0.5);
+      text-align: left;
+    }
+
+    .player-title {
+      font-size: 1.4em;
+      margin-bottom: 10px;
+      color: #ffeb3b;
+      text-shadow: 0 0 8px #ffeb3b;
     }
 
     .item {
       border-bottom: 1px solid #555;
       padding: 10px 5px;
-      text-align: left;
       font-size: 1.1em;
+    }
+
+    .item:last-child {
+      border-bottom: none;
+    }
+
+    .btn-area {
+      margin-top: 25px;
     }
 
     .btn {
@@ -55,15 +71,21 @@
       box-shadow: 0 0 10px #ff5252;
     }
   </style>
+
+  <!-- ✅ Chart.js 読み込み -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
 
-  <h1>📊 プレイヤーごとの値の変遷</h1>
+  <h1>📊 値の変遷履歴（折れ線グラフ付き）</h1>
 
   <div id="historyArea"></div>
 
-  <button class="btn" onclick="location.href='index.html'">ホームに戻る</button>
-  <button class="btn btn-danger" onclick="clearHistory()">履歴を削除</button>
+  <div class="btn-area">
+    <button class="btn" onclick="location.href='index.html'">ホームに戻る</button>
+    <button class="btn btn-danger" onclick="clearHistory()">履歴を削除</button>
+  </div>
 
   <script>
     function loadHistory() {
@@ -75,7 +97,7 @@
         return;
       }
 
-      // プレイヤーごとにグループ化
+      // ✅ プレイヤーごとにグループ化
       const grouped = {};
       history.forEach(h => {
         if (!grouped[h.player]) grouped[h.player] = [];
@@ -84,26 +106,62 @@
 
       area.innerHTML = "";
 
-      Object.keys(grouped).forEach(playerId => {
+      // ✅ プレイヤー番号順に表示
+      Object.keys(grouped).sort((a, b) => a - b).forEach(playerId => {
         const block = document.createElement("div");
         block.className = "player-block";
 
-        block.innerHTML = `<h2>プレイヤー ${playerId}</h2>`;
+        block.innerHTML = `<div class="player-title">プレイヤー ${playerId}</div>`;
 
-        // 新しい順に並べる
+        // ✅ グラフ描画用キャンバス
+        const canvas = document.createElement("canvas");
+        canvas.id = "chart_player_" + playerId;
+        canvas.style.marginBottom = "20px";
+        block.appendChild(canvas);
+
+        // ✅ 履歴一覧
         grouped[playerId].slice().reverse().forEach(h => {
           const div = document.createElement("div");
           div.className = "item";
-
           div.innerHTML = `
             <strong>${h.time}</strong><br>
             ${h.before} → ${h.after} （${h.diff > 0 ? "+" : ""}${h.diff}）
           `;
-
           block.appendChild(div);
         });
 
         area.appendChild(block);
+
+        // ✅ グラフデータ作成
+        const labels = grouped[playerId].map(h => h.time);
+        const values = grouped[playerId].map(h => h.after);
+
+        // ✅ 折れ線グラフ描画
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: `プレイヤー${playerId} の値の推移`,
+              data: values,
+              borderColor: "#ffeb3b",
+              backgroundColor: "rgba(255, 235, 59, 0.3)",
+              borderWidth: 3,
+              tension: 0.3,
+              pointRadius: 5,
+              pointBackgroundColor: "#ffeb3b"
+            }]
+          },
+          options: {
+            plugins: {
+              legend: { labels: { color: "#fff" } }
+            },
+            scales: {
+              x: { ticks: { color: "#fff" } },
+              y: { ticks: { color: "#fff" } }
+            }
+          }
+        });
       });
     }
 

@@ -123,6 +123,21 @@
       localStorage.setItem(key, String(value));
     }
 
+    // ✅ 履歴保存機能（history.html が使う）
+    function saveHistory(playerId, before, after, diff) {
+      const history = JSON.parse(localStorage.getItem("player_value_history") || "[]");
+
+      history.push({
+        player: playerId,
+        before: before,
+        after: after,
+        diff: diff,
+        time: new Date().toLocaleString()
+      });
+
+      localStorage.setItem("player_value_history", JSON.stringify(history));
+    }
+
     function loadPlayerValue() {
       const value = getPlayerValue(PLAYER_ID);
       document.getElementById("currentValue").textContent = value;
@@ -158,13 +173,17 @@
     function onButtonClick(diff) {
       disableButtons(); // ✅ 1回押したらすべて無効
 
-      const current = getPlayerValue(PLAYER_ID);
-      const next = current + diff;
+      const before = getPlayerValue(PLAYER_ID);
+      const after = before + diff;
 
-      setPlayerValue(PLAYER_ID, next);
+      // ✅ 値を保存
+      setPlayerValue(PLAYER_ID, after);
 
-      // ✅ 値は更新するが順位は更新しない
-      document.getElementById("currentValue").textContent = next;
+      // ✅ 履歴を保存（history.html が使う）
+      saveHistory(PLAYER_ID, before, after, diff);
+
+      // ✅ 表示更新（順位は更新しない）
+      document.getElementById("currentValue").textContent = after;
 
       scheduleCloseTab();
     }

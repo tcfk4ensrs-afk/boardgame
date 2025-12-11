@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
-      background: #0b3d0b; /* 芝のような深い緑 */
+      background: #0b3d0b;
       color: #fff;
       padding: 20px;
       text-align: center;
@@ -143,6 +143,24 @@
     }
 
     /* ------------------------------
+       ペナルティ履歴保存
+    ------------------------------ */
+    function savePenaltyHistory(playerId, before, after) {
+      const history = JSON.parse(localStorage.getItem("player_value_history") || "[]");
+
+      history.push({
+        player: playerId,
+        before: before,
+        after: after,
+        diff: after - before,
+        time: new Date().toLocaleString(),
+        penalty: true
+      });
+
+      localStorage.setItem("player_value_history", JSON.stringify(history));
+    }
+
+    /* ------------------------------
        設定読み込み
     ------------------------------ */
     function loadSettings() {
@@ -224,34 +242,29 @@
 
       currentTotalEl.style.color = total > maxTotal ? "red" : "#ffeb3b";
 
-     /* ✅ ペナルティ処理（1位の値を半分にする） */
-if (total > maxTotal) {
-  const values = [];
-  for (let i = 1; i <= count; i++) {
-    values.push({ id: i, value: getPlayerValue(i) });
-  }
+      /* ✅ ペナルティ処理（1位の値を半分にする） */
+      if (total > maxTotal) {
+        const values = [];
+        for (let i = 1; i <= count; i++) {
+          values.push({ id: i, value: getPlayerValue(i) });
+        }
 
-  // 値が高い順にソート
-  values.sort((a, b) => b.value - a.value);
+        values.sort((a, b) => b.value - a.value);
 
-  const topPlayer = values[0].id;
-  const before = values[0].value;
+        const topPlayer = values[0].id;
+        const before = values[0].value;
 
-  // ✅ 半分にする（小数点切り捨て）
-  const after = Math.floor(before / 2);
-  setPlayerValue(topPlayer, after);
+        const after = Math.floor(before / 2);
+        setPlayerValue(topPlayer, after);
 
-  // ✅ 履歴にペナルティとして記録（誰かは分からない）
-  savePenaltyHistory(topPlayer, before, after);
+        /* ✅ 履歴にペナルティとして記録 */
+        savePenaltyHistory(topPlayer, before, after);
 
-  // ✅ 誰が対象かは伏せる
-  alert("⚠ 上限を超えたため、ペナルティが適用されました");
+        alert("⚠ 上限を超えたため、ペナルティが適用されました");
 
-  // ✅ 再描画
-  renderPlayers();
-  return;
-}
-      /* ✅ ペナルティ処理ここまで */
+        renderPlayers();
+        return;
+      }
     }
 
     /* ------------------------------

@@ -224,30 +224,33 @@
 
       currentTotalEl.style.color = total > maxTotal ? "red" : "#ffeb3b";
 
-      /* ✅ ここからペナルティ処理（1位の値を半分にする） */
-      if (total > maxTotal) {
-        const values = [];
-        for (let i = 1; i <= count; i++) {
-          values.push({ id: i, value: getPlayerValue(i) });
-        }
+     /* ✅ ペナルティ処理（1位の値を半分にする） */
+if (total > maxTotal) {
+  const values = [];
+  for (let i = 1; i <= count; i++) {
+    values.push({ id: i, value: getPlayerValue(i) });
+  }
 
-        // 値が高い順にソート
-        values.sort((a, b) => b.value - a.value);
+  // 値が高い順にソート
+  values.sort((a, b) => b.value - a.value);
 
-        const topPlayer = values[0].id;
-        const topValue = values[0].value;
+  const topPlayer = values[0].id;
+  const before = values[0].value;
 
-        // ✅ 半分にする（小数点切り捨て）
-        const newValue = Math.floor(topValue / 2);
-        setPlayerValue(topPlayer, newValue);
+  // ✅ 半分にする（小数点切り捨て）
+  const after = Math.floor(before / 2);
+  setPlayerValue(topPlayer, after);
 
-        // ✅ 誰が対象かは伏せる
-        alert("⚠ 上限を超えたため、ペナルティが適用されました");
+  // ✅ 履歴にペナルティとして記録（誰かは分からない）
+  savePenaltyHistory(topPlayer, before, after);
 
-        // ✅ 再描画
-        renderPlayers();
-        return;
-      }
+  // ✅ 誰が対象かは伏せる
+  alert("⚠ 上限を超えたため、ペナルティが適用されました");
+
+  // ✅ 再描画
+  renderPlayers();
+  return;
+}
       /* ✅ ペナルティ処理ここまで */
     }
 

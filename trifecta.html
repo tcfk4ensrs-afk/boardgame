@@ -30,18 +30,24 @@
       box-shadow: 0 0 10px rgba(255, 235, 59, 0.4);
     }
 
+    label {
+      display: block;
+      margin-top: 15px;
+      font-size: 1.2em;
+    }
+
     input, select {
       width: 80%;
       padding: 10px;
       font-size: 1.2em;
       border-radius: 8px;
       border: none;
-      margin: 10px 0;
+      margin-top: 8px;
       text-align: center;
     }
 
     button {
-      margin-top: 20px;
+      margin-top: 25px;
       padding: 12px 25px;
       font-size: 1.2em;
       border: none;
@@ -55,6 +61,13 @@
 
     button:hover {
       background: #fff176;
+    }
+
+    .closing-msg {
+      margin-top: 20px;
+      font-size: 1.1em;
+      color: #ffeb3b;
+      display: none;
     }
   </style>
 </head>
@@ -76,6 +89,10 @@
     <select id="third"></select>
 
     <button id="saveBtn">送信</button>
+
+    <div class="closing-msg" id="closingMsg">
+      入力を保存しました。5秒後にタブを閉じます…
+    </div>
   </div>
 
   <script>
@@ -117,11 +134,21 @@
         return;
       }
 
-      const data = { name, first, second, third };
-      localStorage.setItem("trifecta", JSON.stringify(data));
+      // 履歴に追加
+      const history = JSON.parse(localStorage.getItem("trifecta_history") || "[]");
+      history.push({ name, first, second, third });
+      localStorage.setItem("trifecta_history", JSON.stringify(history));
 
-      // 結果画面へ遷移
-      window.location.href = "result.html";
+      // メッセージ表示
+      document.getElementById("closingMsg").style.display = "block";
+
+      // 5秒後にタブを閉じる
+      setTimeout(() => {
+        window.close();
+      }, 5000);
+
+      // 全員の結果ページへ移動
+      window.location.href = "results_all.html";
     }
 
     document.getElementById("saveBtn").addEventListener("click", saveTrifecta);

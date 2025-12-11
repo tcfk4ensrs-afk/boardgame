@@ -206,7 +206,7 @@
     }
 
     /* ------------------------------
-       合計値表示
+       合計値表示 + ペナルティ処理
     ------------------------------ */
     function updateTotalDisplay() {
       const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
@@ -223,6 +223,32 @@
       document.getElementById("maxTotalLabel").textContent = `上限：${maxTotal}`;
 
       currentTotalEl.style.color = total > maxTotal ? "red" : "#ffeb3b";
+
+      /* ✅ ここからペナルティ処理（1位の値を半分にする） */
+      if (total > maxTotal) {
+        const values = [];
+        for (let i = 1; i <= count; i++) {
+          values.push({ id: i, value: getPlayerValue(i) });
+        }
+
+        // 値が高い順にソート
+        values.sort((a, b) => b.value - a.value);
+
+        const topPlayer = values[0].id;
+        const topValue = values[0].value;
+
+        // ✅ 半分にする（小数点切り捨て）
+        const newValue = Math.floor(topValue / 2);
+        setPlayerValue(topPlayer, newValue);
+
+        // ✅ 誰が対象かは伏せる
+        alert("⚠ 上限を超えたため、ペナルティが適用されました");
+
+        // ✅ 再描画
+        renderPlayers();
+        return;
+      }
+      /* ✅ ペナルティ処理ここまで */
     }
 
     /* ------------------------------
@@ -233,15 +259,11 @@
 
       const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
 
-      // ✅ 各プレイヤーの値を初期化
       for (let i = 1; i <= count; i++) {
         setPlayerValue(i, DEFAULT_VALUE);
       }
 
-      // ✅ 3連単履歴を削除
       localStorage.removeItem("trifecta_history");
-
-      // ✅ 値の変遷履歴を削除
       localStorage.removeItem("player_value_history");
 
       alert("全データをリセットしました。");

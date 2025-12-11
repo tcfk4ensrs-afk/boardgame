@@ -39,12 +39,6 @@
       animation: show 0.6s forwards;
     }
 
-    .item:nth-child(1) { animation-delay: 0.1s; }
-    .item:nth-child(2) { animation-delay: 0.2s; }
-    .item:nth-child(3) { animation-delay: 0.3s; }
-    .item:nth-child(4) { animation-delay: 0.4s; }
-    .item:nth-child(5) { animation-delay: 0.5s; }
-
     @keyframes show {
       to {
         opacity: 1;
@@ -76,10 +70,6 @@
       cursor: pointer;
       box-shadow: 0 0 10px #ffeb3b;
     }
-
-    .back-btn:hover {
-      background: #fff176;
-    }
   </style>
 </head>
 <body>
@@ -98,6 +88,22 @@
       return v ? parseInt(v, 10) : 5;
     }
 
+    function isHitWithTies(pred, actual, values) {
+      const v1 = values.find(v => v.id === actual[0]).value;
+      const v2 = values.find(v => v.id === actual[1]).value;
+      const v3 = values.find(v => v.id === actual[2]).value;
+
+      if (pred[0] !== actual[0]) return false;
+
+      if (v2 === v3) {
+        const setPred = new Set([pred[1], pred[2]]);
+        const setActual = new Set([actual[1], actual[2]]);
+        return [...setPred].every(x => setActual.has(x));
+      }
+
+      return pred[1] === actual[1] && pred[2] === actual[2];
+    }
+
     function loadAllResults() {
       const history = JSON.parse(localStorage.getItem("trifecta_history") || "[]");
       const board = document.getElementById("resultBoard");
@@ -107,25 +113,28 @@
         return;
       }
 
-      // 実際の順位を計算
       const count = parseInt(localStorage.getItem("playerCount") || "3", 10);
       const values = [];
       for (let i = 1; i <= count; i++) {
         values.push({ id: i, value: getPlayerValue(i) });
       }
+
       values.sort((a, b) => b.value - a.value);
 
       const actual1 = values[0].id;
       const actual2 = values[1].id;
       const actual3 = values[2].id;
 
-      // 新しい順に表示
+      const v2 = values[1].value;
+      const v3 = values[2].value;
+
       board.innerHTML = "";
+
       history.slice().reverse().forEach((h, index) => {
-        const hit =
-          h.first == actual1 &&
-          h.second == actual2 &&
-          h.third == actual3;
+        const predicted = [Number(h.first), Number(h.second), Number(h.third)];
+        const actual = [actual1, actual2, actual3];
+
+        const hit = isHitWithTies(predicted, actual, values);
 
         const div = document.createElement("div");
         div.className = "item";
@@ -134,7 +143,7 @@
         div.innerHTML = `
           <strong>${h.name}</strong><br>
           予想：${h.first} → ${h.second} → ${h.third}<br>
-          結果：${actual1} → ${actual2} → ${actual3}<br>
+          結果：${actual1} → ${actual2}${v2 === v3 ? "（同着）" : ""} → ${actual3}${v2 === v3 ? "（同着）" : ""}<br>
           <span class="${hit ? "hit" : "miss"}">
             ${hit ? "🎉 的中！" : "❌ ハズレ"}
           </span>

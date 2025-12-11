@@ -4,20 +4,94 @@
   <meta charset="UTF-8">
   <title>プレイヤー1</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    button { margin: 5px; padding: 8px 12px; }
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #0b3d0b;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .player-badge {
+      display: inline-block;
+      background: #ffeb3b;
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-size: 1.6em;
+      font-weight: bold;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px #ffeb3b;
+    }
+
+    .value-box {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 15px;
+      margin: 15px auto;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      border: 2px solid #ffeb3b;
+      box-shadow: 0 0 10px rgba(255, 235, 59, 0.4);
+      font-size: 1.3em;
+    }
+
+    #currentValue {
+      font-size: 2em;
+      color: #ffeb3b;
+      font-weight: bold;
+    }
+
+    #currentRank {
+      font-size: 1.5em;
+      color: #ffeb3b;
+      font-weight: bold;
+      margin-top: 10px;
+      text-shadow: 0 0 8px #ffeb3b;
+    }
+
+    .btn-area {
+      margin-top: 20px;
+    }
+
+    button {
+      margin: 8px;
+      padding: 12px 20px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 8px;
+      background: #ffeb3b;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ffeb3b;
+    }
+
+    button:hover {
+      background: #fff176;
+    }
+
+    .closing-msg {
+      margin-top: 20px;
+      font-size: 1.1em;
+      color: #ffeb3b;
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <h1>プレイヤー1</h1>
 
-  <div>
-    <p>現在の値：<span id="currentValue">-</span></p>
-    <p>現在の順位：<span id="currentRank">-</span></p>
+  <div class="player-badge">プレイヤー 1</div>
+
+  <div class="value-box">
+    <p>現在の値：</p>
+    <div id="currentValue">-</div>
+
+    <p>順位：</p>
+    <div id="currentRank">-</div>
   </div>
 
-  <div>
-    <p>値を変更：</p>
+  <div class="btn-area">
     <button data-diff="-3">-3</button>
     <button data-diff="-2">-2</button>
     <button data-diff="-1">-1</button>
@@ -26,8 +100,12 @@
     <button data-diff="10">+10</button>
   </div>
 
+  <div class="closing-msg" id="closingMsg">
+    変更を保存しました。5秒後に画面を閉じます…
+  </div>
+
   <script>
-    const PLAYER_ID = 1;
+    const PLAYER_ID = 1;  // ← プレイヤー番号
     const DEFAULT_VALUE = 5;
     const PLAYER_COUNT_KEY = "playerCount";
 
@@ -54,11 +132,13 @@
       for (let i = 1; i <= count; i++) {
         values.push(getPlayerValue(i));
       }
-      const sorted = [...values].sort((a, b) => b - a); // 大きい順
+      const sorted = [...values].sort((a, b) => b - a);
       const myValue = getPlayerValue(PLAYER_ID);
       const index = sorted.indexOf(myValue);
       const rank = index + 1;
-      document.getElementById("currentRank").textContent = rank + "位 / " + count + "人中";
+
+      document.getElementById("currentRank").textContent =
+        `${rank} 位 / ${count} 人`;
     }
 
     function updateAndRank() {
@@ -67,6 +147,7 @@
     }
 
     function scheduleCloseTab() {
+      document.getElementById("closingMsg").style.display = "block";
       setTimeout(() => {
         window.close();
       }, 5000);
@@ -89,5 +170,6 @@
 
     updateAndRank();
   </script>
+
 </body>
 </html>

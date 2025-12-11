@@ -80,6 +80,12 @@
 
   <h1>📊 値の変遷履歴（折れ線グラフ付き）</h1>
 
+  <!-- ✅ 全プレイヤー重ね書きグラフ -->
+  <div class="player-block">
+    <div class="player-title">全プレイヤーの推移（重ね書き）</div>
+    <canvas id="allPlayersChart"></canvas>
+  </div>
+
   <div id="historyArea"></div>
 
   <div class="btn-area">
@@ -104,22 +110,66 @@
         grouped[h.player].push(h);
       });
 
+      /* -----------------------------------------
+         ✅ まず「全プレイヤー重ね書きグラフ」を描画
+      ----------------------------------------- */
+      const allCanvas = document.getElementById("allPlayersChart");
+
+      const colorList = [
+        "#ffeb3b", "#4caf50", "#03a9f4", "#e91e63", "#ff9800",
+        "#9c27b0", "#8bc34a", "#00bcd4", "#ffc107", "#f44336",
+        "#cddc39", "#009688", "#3f51b5", "#ff5722", "#673ab7"
+      ];
+
+      const datasets = Object.keys(grouped).map((playerId, index) => {
+        return {
+          label: `プレイヤー${playerId}`,
+          data: grouped[playerId].map(h => h.after),
+          borderColor: colorList[index % colorList.length],
+          backgroundColor: "transparent",
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: colorList[index % colorList.length]
+        };
+      });
+
+      const maxLength = Math.max(...Object.values(grouped).map(arr => arr.length));
+      const labels = Array.from({ length: maxLength }, (_, i) => `#${i + 1}`);
+
+      new Chart(allCanvas, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: datasets
+        },
+        options: {
+          plugins: {
+            legend: { labels: { color: "#fff" } }
+          },
+          scales: {
+            x: { ticks: { color: "#fff" } },
+            y: { ticks: { color: "#fff" } }
+          }
+        }
+      });
+
+      /* -----------------------------------------
+         ✅ 個別プレイヤーのグラフ＋履歴一覧
+      ----------------------------------------- */
       area.innerHTML = "";
 
-      // ✅ プレイヤー番号順に表示
       Object.keys(grouped).sort((a, b) => a - b).forEach(playerId => {
         const block = document.createElement("div");
         block.className = "player-block";
 
         block.innerHTML = `<div class="player-title">プレイヤー ${playerId}</div>`;
 
-        // ✅ グラフ描画用キャンバス
         const canvas = document.createElement("canvas");
         canvas.id = "chart_player_" + playerId;
         canvas.style.marginBottom = "20px";
         block.appendChild(canvas);
 
-        // ✅ 履歴一覧
         grouped[playerId].slice().reverse().forEach(h => {
           const div = document.createElement("div");
           div.className = "item";
@@ -132,11 +182,9 @@
 
         area.appendChild(block);
 
-        // ✅ グラフデータ作成
         const labels = grouped[playerId].map(h => h.time);
         const values = grouped[playerId].map(h => h.after);
 
-        // ✅ 折れ線グラフ描画
         new Chart(canvas, {
           type: "line",
           data: {

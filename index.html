@@ -204,15 +204,32 @@
       currentTotalEl.style.color = total > maxTotal ? "red" : "#ffeb3b";
     }
 
-    function resetAllPlayers() {
-      if (!confirm("全プレイヤーの値を5に戻します。よろしいですか？")) return;
+    function resetAllPlayers() {function resetAllPlayers() {
+  if (!confirm("全データを完全にリセットします。よろしいですか？")) return;
 
-      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
-      for (let i = 1; i <= count; i++) {
-        setPlayerValue(i, DEFAULT_VALUE);
-      }
-      renderPlayers();
-      alert("リセットしました。");
+  const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+
+  // ✅ 各プレイヤーの値を初期化（5に戻す）
+  for (let i = 1; i <= count; i++) {
+    setPlayerValue(i, DEFAULT_VALUE);
+  }
+
+  // ✅ 3連単履歴を削除
+  localStorage.removeItem("trifecta_history");
+
+  // ✅ 値の変遷履歴を削除
+  localStorage.removeItem("player_value_history");
+
+  // ✅ 必要なら maxTotal も初期化したい場合は以下を有効化
+  // localStorage.setItem(MAX_TOTAL_KEY, "100");
+
+  alert("全データをリセットしました。");
+
+  // ✅ 表示更新
+  renderPlayers();
+  updateTotalDisplay();
+}
+
     }
 
     document.getElementById("savePlayerCount").addEventListener("click", savePlayerCount);

@@ -72,7 +72,7 @@
       border-radius: 8px;
       width: 85%;
       max-width: 450px;
-      border-left: 6px solid #ffeb3b; /* 馬柱風のライン */
+      border-left: 6px solid #ffeb3b;
       box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
       font-size: 1.2em;
       text-align: left;
@@ -120,7 +120,7 @@
   <div id="playerList"></div>
 
   <div class="section">
-    <button id="resetBtn">リセット（全員5に戻す）</button>
+    <button id="resetBtn">リセット（全データ初期化）</button>
   </div>
 
   <script>
@@ -128,11 +128,13 @@
     const PLAYER_COUNT_KEY = "playerCount";
     const MAX_TOTAL_KEY = "maxTotal";
 
+    /* ------------------------------
+       値の取得・保存
+    ------------------------------ */
     function getPlayerValue(playerId) {
       const key = "player_" + playerId + "_value";
       const stored = localStorage.getItem(key);
-      if (stored === null) return DEFAULT_VALUE;
-      return parseInt(stored, 10);
+      return stored ? parseInt(stored, 10) : DEFAULT_VALUE;
     }
 
     function setPlayerValue(playerId, value) {
@@ -140,17 +142,24 @@
       localStorage.setItem(key, String(value));
     }
 
+    /* ------------------------------
+       設定読み込み
+    ------------------------------ */
     function loadSettings() {
       const storedCount = localStorage.getItem(PLAYER_COUNT_KEY);
       if (storedCount !== null) {
         document.getElementById("playerCount").value = storedCount;
       }
+
       const storedMax = localStorage.getItem(MAX_TOTAL_KEY);
       if (storedMax !== null) {
         document.getElementById("maxTotal").value = storedMax;
       }
     }
 
+    /* ------------------------------
+       プレイヤー人数保存
+    ------------------------------ */
     function savePlayerCount() {
       const count = parseInt(document.getElementById("playerCount").value, 10);
       if (isNaN(count) || count < 1) {
@@ -161,6 +170,9 @@
       renderPlayers();
     }
 
+    /* ------------------------------
+       上限値保存
+    ------------------------------ */
     function saveMaxTotal() {
       const max = parseInt(document.getElementById("maxTotal").value, 10);
       if (isNaN(max) || max < 1) {
@@ -171,6 +183,9 @@
       updateTotalDisplay();
     }
 
+    /* ------------------------------
+       プレイヤー一覧表示
+    ------------------------------ */
     function renderPlayers() {
       const list = document.getElementById("playerList");
       list.innerHTML = "";
@@ -186,15 +201,21 @@
         `;
         list.appendChild(div);
       }
+
       updateTotalDisplay();
     }
 
+    /* ------------------------------
+       合計値表示
+    ------------------------------ */
     function updateTotalDisplay() {
       const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
       let total = 0;
+
       for (let i = 1; i <= count; i++) {
         total += getPlayerValue(i);
       }
+
       const currentTotalEl = document.getElementById("currentTotal");
       currentTotalEl.textContent = total;
 
@@ -204,38 +225,41 @@
       currentTotalEl.style.color = total > maxTotal ? "red" : "#ffeb3b";
     }
 
-    function resetAllPlayers() {function resetAllPlayers() {
-  if (!confirm("全データを完全にリセットします。よろしいですか？")) return;
+    /* ------------------------------
+       全データリセット
+    ------------------------------ */
+    function resetAllPlayers() {
+      if (!confirm("全データを完全にリセットします。よろしいですか？")) return;
 
-  const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
 
-  // ✅ 各プレイヤーの値を初期化（5に戻す）
-  for (let i = 1; i <= count; i++) {
-    setPlayerValue(i, DEFAULT_VALUE);
-  }
+      // ✅ 各プレイヤーの値を初期化
+      for (let i = 1; i <= count; i++) {
+        setPlayerValue(i, DEFAULT_VALUE);
+      }
 
-  // ✅ 3連単履歴を削除
-  localStorage.removeItem("trifecta_history");
+      // ✅ 3連単履歴を削除
+      localStorage.removeItem("trifecta_history");
 
-  // ✅ 値の変遷履歴を削除
-  localStorage.removeItem("player_value_history");
+      // ✅ 値の変遷履歴を削除
+      localStorage.removeItem("player_value_history");
 
-  // ✅ 必要なら maxTotal も初期化したい場合は以下を有効化
-  // localStorage.setItem(MAX_TOTAL_KEY, "100");
+      alert("全データをリセットしました。");
 
-  alert("全データをリセットしました。");
-
-  // ✅ 表示更新
-  renderPlayers();
-  updateTotalDisplay();
-}
-
+      renderPlayers();
+      updateTotalDisplay();
     }
 
+    /* ------------------------------
+       イベント登録
+    ------------------------------ */
     document.getElementById("savePlayerCount").addEventListener("click", savePlayerCount);
     document.getElementById("saveMaxTotal").addEventListener("click", saveMaxTotal);
     document.getElementById("resetBtn").addEventListener("click", resetAllPlayers);
 
+    /* ------------------------------
+       初期表示
+    ------------------------------ */
     loadSettings();
     renderPlayers();
   </script>

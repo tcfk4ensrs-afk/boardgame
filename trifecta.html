@@ -59,8 +59,10 @@
       box-shadow: 0 0 10px #ffeb3b;
     }
 
-    button:hover {
-      background: #fff176;
+    .note {
+      margin-top: 15px;
+      font-size: 1em;
+      color: #ffeb3b;
     }
 
     .closing-msg {
@@ -87,6 +89,8 @@
 
     <label>3着</label>
     <select id="third"></select>
+
+    <p class="note">※ 同着の場合は 2着・3着の順番は自由で判定します</p>
 
     <button id="saveBtn">送信</button>
 
@@ -134,20 +138,14 @@
         return;
       }
 
-      // 履歴に追加
       const history = JSON.parse(localStorage.getItem("trifecta_history") || "[]");
       history.push({ name, first, second, third });
       localStorage.setItem("trifecta_history", JSON.stringify(history));
 
-      // メッセージ表示
       document.getElementById("closingMsg").style.display = "block";
 
-      // 5秒後にタブを閉じる
-      setTimeout(() => {
-        window.close();
-      }, 5000);
+      setTimeout(() => window.close(), 5000);
 
-      // 全員の結果ページへ移動
       window.location.href = "results_all.html";
     }
 

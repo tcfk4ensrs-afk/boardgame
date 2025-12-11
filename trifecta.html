@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>3連単入力</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #0b3d0b;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2em;
+      color: #ffeb3b;
+      text-shadow: 0 0 10px #ffeb3b;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 20px;
+      margin: 20px auto;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 450px;
+      border: 2px solid #ffeb3b;
+      box-shadow: 0 0 10px rgba(255, 235, 59, 0.4);
+    }
+
+    input, select {
+      width: 80%;
+      padding: 10px;
+      font-size: 1.2em;
+      border-radius: 8px;
+      border: none;
+      margin: 10px 0;
+      text-align: center;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 25px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 8px;
+      background: #ffeb3b;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ffeb3b;
+    }
+
+    button:hover {
+      background: #fff176;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏇 3連単入力</h1>
+
+  <div class="section">
+    <label>あなたの名前</label>
+    <input type="text" id="playerName" placeholder="例：タカシ">
+
+    <label>1着</label>
+    <select id="first"></select>
+
+    <label>2着</label>
+    <select id="second"></select>
+
+    <label>3着</label>
+    <select id="third"></select>
+
+    <button id="saveBtn">送信</button>
+  </div>
+
+  <script>
+    const PLAYER_COUNT_KEY = "playerCount";
+
+    function loadPlayerCount() {
+      return parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+    }
+
+    function createOptions() {
+      const count = loadPlayerCount();
+      const selects = ["first", "second", "third"];
+
+      selects.forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = "";
+        for (let i = 1; i <= count; i++) {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = `プレイヤー${i}`;
+          sel.appendChild(opt);
+        }
+      });
+    }
+
+    function saveTrifecta() {
+      const name = document.getElementById("playerName").value.trim();
+      const first = document.getElementById("first").value;
+      const second = document.getElementById("second").value;
+      const third = document.getElementById("third").value;
+
+      if (!name) {
+        alert("名前を入力してください。");
+        return;
+      }
+
+      if (first === second || second === third || first === third) {
+        alert("同じプレイヤーを複数の着順に選ぶことはできません。");
+        return;
+      }
+
+      const data = { name, first, second, third };
+      localStorage.setItem("trifecta", JSON.stringify(data));
+
+      // 結果画面へ遷移
+      window.location.href = "result.html";
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", saveTrifecta);
+
+    createOptions();
+  </script>
+
+</body>
+</html>

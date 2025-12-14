@@ -2,42 +2,51 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>全員の結果一覧（段階公開版）</title>
+  <title>全員の結果一覧（スマホ最適化版）</title>
+
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
       background: #000;
       color: #ffeb3b;
-      padding: 20px;
+      padding: 15px;
       text-align: center;
       user-select: none;
+      margin: 0;
     }
 
     h1 {
-      font-size: 2em;
-      margin-bottom: 20px;
+      font-size: 1.8em;
+      margin-bottom: 15px;
       text-shadow: 0 0 10px #ffeb3b;
-      letter-spacing: 2px;
+      letter-spacing: 1px;
     }
 
-    .correct-box {
+    /* ✅ 共通の枠デザイン */
+    .box {
       width: 95%;
       max-width: 600px;
       margin: 0 auto 25px auto;
       background: #111;
       border: 3px solid #ffeb3b;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 15px;
       box-shadow: 0 0 15px rgba(255, 235, 59, 0.5);
-      font-size: 1.3em;
     }
 
-    .rank-line {
+    /* ✅ 最初の3着枠 */
+    .first-reveal-box h2 {
       font-size: 1.5em;
-      margin: 8px 0;
+      margin-bottom: 10px;
+    }
+
+    /* ✅ 順位表示 */
+    .rank-line {
+      font-size: 1.4em;
+      margin: 10px 0;
       opacity: 0;
       transform: translateY(20px);
-      transition: all 0.6s ease-out;
+      transition: all 0.5s ease-out;
     }
 
     .rank-line.show {
@@ -45,18 +54,7 @@
       transform: translateY(0);
     }
 
-    .board {
-      width: 95%;
-      max-width: 600px;
-      margin: 40px auto 0 auto;
-      background: #111;
-      border: 3px solid #ffeb3b;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 0 15px rgba(255, 235, 59, 0.5);
-      display: none;
-    }
-
+    /* ✅ 履歴一覧 */
     .item {
       border-bottom: 1px solid #555;
       padding: 12px 5px;
@@ -109,19 +107,27 @@
     }
   </style>
 </head>
+
 <body>
 
   <h1>🏇 全員の結果一覧</h1>
 
-  <!-- ✅ 正解の3連単（段階公開） -->
-  <div class="correct-box" id="correctBox">
-    <h2>🎯 正解の3連単</h2>
-    <div id="rank3" class="rank-line">3着：</div>
-    <div id="rank2" class="rank-line">2着：</div>
-    <div id="rank1" class="rank-line">1着：</div>
+  <!-- ✅ 最初に表示する3着だけの枠（最初は非表示） -->
+  <div class="box first-reveal-box" id="firstRevealBox" style="display:none;">
+    <h2>🎯 まずは3着！</h2>
+    <div id="firstRank3" class="rank-line">3着：</div>
   </div>
 
-  <div class="board" id="resultBoard"></div>
+  <!-- ✅ 3連単の全順位（段階公開） -->
+  <div class="box" id="correctBox">
+    <h2>🎯 正解の3連単</h2>
+    <div id="rank1" class="rank-line">1着：</div>
+    <div id="rank2" class="rank-line">2着：</div>
+    <div id="rank3" class="rank-line">3着：</div>
+  </div>
+
+  <!-- ✅ 履歴一覧 -->
+  <div class="box" id="resultBoard" style="display:none;"></div>
 
   <div class="btn-area">
     <button class="btn" onclick="location.href='index.html'">ホームに戻る</button>
@@ -153,7 +159,7 @@
     const playersCol = collection(db, "players");
     const trifectaCol = collection(db, "trifecta");
 
-    /* ✅ 同着対応ロジック（そのまま使用） */
+    /* ✅ 同着判定ロジック（省略：あなたの元コードそのまま） */
     function isHitWithTies(pred, actual, values) {
       const v = {};
       values.forEach(p => v[p.id] = p.value);
@@ -189,11 +195,9 @@
     async function loadAllResults() {
       const board = document.getElementById("resultBoard");
 
-      /* ✅ プレイヤー人数取得 */
       const settingsSnap = await getDoc(settingsRef);
       const playerCount = settingsSnap.data().playerCount;
 
-      /* ✅ プレイヤー値取得 */
       const values = [];
       const playersSnap = await getDocs(playersCol);
       playersSnap.forEach(doc => {
@@ -210,20 +214,23 @@
       const v2 = values[1].value;
       const v3 = values[2].value;
 
-      /* ✅ 正解の3連単（段階公開用にセット） */
-      document.getElementById("rank3").textContent =
+      /* ✅ 最初の3着枠にセット */
+      document.getElementById("firstRank3").textContent =
         `3着：プレイヤー${actual3} ${v2===v3 ? "（同着）" : ""}`;
-      document.getElementById("rank2").textContent =
-        `2着：プレイヤー${actual2} ${v1===v2 || v2===v3 ? "（同着）" : ""}`;
+
+      /* ✅ 正解の3連単（correctBox） */
       document.getElementById("rank1").textContent =
         `1着：プレイヤー${actual1} ${v1===v2 ? "（同着）" : ""}`;
+      document.getElementById("rank2").textContent =
+        `2着：プレイヤー${actual2} ${v1===v2 || v2===v3 ? "（同着）" : ""}`;
+      document.getElementById("rank3").textContent =
+        `3着：プレイヤー${actual3} ${v2===v3 ? "（同着）" : ""}`;
 
-      /* ✅ 3連単予想を取得 */
+      /* ✅ 予想履歴 */
       const trifectaSnap = await getDocs(trifectaCol);
       const history = [];
       trifectaSnap.forEach(doc => history.push(doc.data()));
 
-      /* ✅ 的中判定 */
       const sortedHistory = history
         .map(h => {
           const predicted = [Number(h.first), Number(h.second), Number(h.third)];
@@ -233,7 +240,6 @@
         })
         .sort((a, b) => b.hit - a.hit);
 
-      /* ✅ 結果一覧を生成（最初は非表示） */
       board.innerHTML = "";
       sortedHistory.forEach((h, index) => {
         const div = document.createElement("div");
@@ -243,14 +249,6 @@
         div.innerHTML = `
           <strong>${h.name}</strong><br>
           予想：${h.first} → ${h.second} → ${h.third}<br>
-
-          <div class="rank-block">
-            <strong>実際の着順</strong><br>
-            1着：${actual1}<br>
-            2着：${actual2}<br>
-            3着：${actual3}<br>
-          </div>
-
           <span class="${h.hit ? "hit" : "miss"}">
             ${h.hit ? "🎉 的中！" : "❌ ハズレ"}
           </span>
@@ -259,7 +257,6 @@
         board.appendChild(div);
       });
 
-      /* ✅ タップで段階公開 */
       setupTapReveal();
     }
 
@@ -271,30 +268,32 @@
         step++;
 
         if (step === 1) {
-          // ✅ 最初のタップ → 自動スクロールして3着表示
-          document.getElementById("rank3").classList.add("show");
-          document.getElementById("correctBox").scrollIntoView({ behavior: "smooth" });
+          const box = document.getElementById("firstRevealBox");
+          box.style.display = "block";
+          box.scrollIntoView({ behavior: "smooth" });
         }
 
         if (step === 2) {
-          // ✅ 2回目 → 2着表示
-          document.getElementById("rank2").classList.add("show");
-        }
-
-        if (step === 3) {
-          // ✅ 3回目 → 1着表示
           document.getElementById("rank1").classList.add("show");
         }
 
+        if (step === 3) {
+          document.getElementById("rank2").classList.add("show");
+        }
+
         if (step === 4) {
-          // ✅ 4回目 → 結果一覧を表示
-          document.getElementById("resultBoard").style.display = "block";
-          document.getElementById("resultBoard").scrollIntoView({ behavior: "smooth" });
+          document.getElementById("rank3").classList.add("show");
+        }
+
+        if (step === 5) {
+          const board = document.getElementById("resultBoard");
+          board.style.display = "block";
+          board.scrollIntoView({ behavior: "smooth" });
         }
       });
     }
 
-    /* ✅ Firestore の trifecta を全削除 */
+    /* ✅ 履歴削除 */
     async function clearHistory() {
       if (!confirm("本当に履歴をすべて削除しますか？")) return;
 

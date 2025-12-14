@@ -107,87 +107,112 @@
     入力を保存しました。5秒後にタブを閉じます…
   </div>
 
-  <script>
-    const PLAYER_ID = 8;  // ← プレイヤー番号
-    const DEFAULT_VALUE = 5;
-    const PLAYER_COUNT_KEY = "playerCount";
+  <script type="module">
+    /* ✅ Firebase SDK 読み込み */
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, setDoc,
+      onSnapshot, collection, addDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    function getPlayerValue(playerId) {
-      const key = "player_" + playerId + "_value";
-      const stored = localStorage.getItem(key);
-      return stored ? parseInt(stored, 10) : DEFAULT_VALUE;
-    }
+    /* ✅ Firebase 設定 */
+    const firebaseConfig = {
+      apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
+      authDomain: "sanrentan-6adc0.firebaseapp.com",
+      projectId: "sanrentan-6adc0",
+      storageBucket: "sanrentan-6adc0.firebasestorage.app",
+      messagingSenderId: "920208181022",
+      appId: "1:920208181022:web:bb3a050055fb9a40782b0f",
+      measurementId: "G-43N8MYJW96"
+    };
 
-    function setPlayerValue(playerId, value) {
-      const key = "player_" + playerId + "_value";
-      localStorage.setItem(key, String(value));
-    }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    // ✅ 履歴保存機能（history.html が使う）
-    function saveHistory(playerId, before, after, diff) {
-      const history = JSON.parse(localStorage.getItem("player_value_history") || "[]");
+    /* ✅ このページのプレイヤーID */
+    const PLAYER_ID = 8;
 
-      history.push({
-        player: playerId,
-        before: before,
-        after: after,
-        diff: diff,
-        time: new Date().toLocaleString()
-      });
+    /* ✅ Firestore 参照 */
+    const playerRef = doc(db, "players", String(PLAYER_ID));
+    const settingsRef = doc(db, "settings", "global");
+    const historyCol = collection(db, "history");
 
-      localStorage.setItem("player_value_history", JSON.stringify(history));
-    }
+    /* ✅ Firestore からリアルタイムで値を取得 */
+    onSnapshot(playerRef, (snap) => {
+      if (snap.exists()) {
+        document.getElementById("currentValue").textContent = snap.data().value;
+      }
+    });
 
-    function loadPlayerValue() {
-      const value = getPlayerValue(PLAYER_ID);
-      document.getElementById("currentValue").textContent = value;
-    }
+    /* ✅ 順位計算 */
+    async function calcRank() {
+      const settingsSnap = await getDoc(settingsRef);
+      if (!settingsSnap.exists()) return;
 
-    function calcRank() {
-      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+      const playerCount = settingsSnap.data().playerCount;
       const values = [];
 
-      for (let i = 1; i <= count; i++) {
-        values.push(getPlayerValue(i));
+      for (let i = 1; i <= playerCount; i++) {
+        const snap = await getDoc(doc(db, "players", String(i)));
+        values.push(snap.exists() ? snap.data().value : 5);
       }
 
+      const mySnap = await getDoc(playerRef);
+      const myValue = mySnap.exists() ? mySnap.data().value : 5;
+
       const sorted = [...values].sort((a, b) => b - a);
-      const myValue = getPlayerValue(PLAYER_ID);
       const rank = sorted.indexOf(myValue) + 1;
 
       document.getElementById("currentRank").textContent =
-        `${rank} 位 / ${count} 人`;
+        `${rank} 位 / ${playerCount} 人`;
     }
 
+    /* ✅ 履歴保存 */
+    async function saveHistory(before, after, diff) {
+      await addDoc(historyCol, {
+        player: PLAYER_ID,
+        before,
+        after,
+        diff,
+        time: new Date().toLocaleString(),
+        penalty: false
+      });
+    }
+
+    /* ✅ ボタン無効化 */
     function disableButtons() {
       document.querySelectorAll("button[data-diff]").forEach(btn => {
         btn.disabled = true;
       });
     }
 
+    /* ✅ タブを閉じる（確実に閉じる版） */
     function scheduleCloseTab() {
       document.getElementById("closingMsg").style.display = "block";
-      setTimeout(() => window.close(), 5000);
+
+      setTimeout(() => {
+        window.open('', '_self');
+        window.close();
+      }, 5000);
     }
 
-    function onButtonClick(diff) {
-      disableButtons(); // ✅ 1回押したらすべて無効
+    /* ✅ 値変更処理 */
+    async function onButtonClick(diff) {
+      disableButtons();
 
-      const before = getPlayerValue(PLAYER_ID);
+      const snap = await getDoc(playerRef);
+      const before = snap.exists() ? snap.data().value : 5;
       const after = before + diff;
 
-      // ✅ 値を保存
-      setPlayerValue(PLAYER_ID, after);
+      await setDoc(playerRef, { value: after });
+      await saveHistory(before, after, diff);
 
-      // ✅ 履歴を保存（history.html が使う）
-      saveHistory(PLAYER_ID, before, after, diff);
-
-      // ✅ 表示更新（順位は更新しない）
-      document.getElementById("currentValue").textContent = after;
+      // ✅ 表示更新は onSnapshot に任せる
 
       scheduleCloseTab();
     }
 
+    /* ✅ ボタンイベント登録 */
     document.querySelectorAll("button[data-diff]").forEach(btn => {
       btn.addEventListener("click", () => {
         const diff = parseInt(btn.getAttribute("data-diff"), 10);
@@ -195,8 +220,7 @@
       });
     });
 
-    // 初期表示（順位は最初だけ計算）
-    loadPlayerValue();
+    /* ✅ 初期表示 */
     calcRank();
   </script>
 

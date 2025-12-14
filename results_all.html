@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>全員の結果一覧（Firebase版）</title>
+  <title>全員の結果一覧（段階公開版）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -10,6 +10,7 @@
       color: #ffeb3b;
       padding: 20px;
       text-align: center;
+      user-select: none;
     }
 
     h1 {
@@ -47,12 +48,13 @@
     .board {
       width: 95%;
       max-width: 600px;
-      margin: 0 auto;
+      margin: 40px auto 0 auto;
       background: #111;
       border: 3px solid #ffeb3b;
       border-radius: 10px;
       padding: 15px;
       box-shadow: 0 0 15px rgba(255, 235, 59, 0.5);
+      display: none;
     }
 
     .item {
@@ -111,11 +113,12 @@
 
   <h1>🏇 全員の結果一覧</h1>
 
-  <div class="correct-box">
+  <!-- ✅ 正解の3連単（段階公開） -->
+  <div class="correct-box" id="correctBox">
     <h2>🎯 正解の3連単</h2>
-    <div id="correct1" class="rank-line">1着：</div>
-    <div id="correct2" class="rank-line">2着：</div>
-    <div id="correct3" class="rank-line">3着：</div>
+    <div id="rank3" class="rank-line">3着：</div>
+    <div id="rank2" class="rank-line">2着：</div>
+    <div id="rank1" class="rank-line">1着：</div>
   </div>
 
   <div class="board" id="resultBoard"></div>
@@ -182,7 +185,7 @@
       );
     }
 
-    /* ✅ Firestore から全データを読み込んで結果を表示 */
+    /* ✅ Firestore から全データを読み込む */
     async function loadAllResults() {
       const board = document.getElementById("resultBoard");
 
@@ -207,17 +210,13 @@
       const v2 = values[1].value;
       const v3 = values[2].value;
 
-      /* ✅ 正解の3連単表示 */
-      document.getElementById("correct1").textContent =
-        `1着：プレイヤー${actual1} ${v1===v2 ? "（同着）" : ""}`;
-      document.getElementById("correct2").textContent =
-        `2着：プレイヤー${actual2} ${v2===v3 || v1===v2 ? "（同着）" : ""}`;
-      document.getElementById("correct3").textContent =
+      /* ✅ 正解の3連単（段階公開用にセット） */
+      document.getElementById("rank3").textContent =
         `3着：プレイヤー${actual3} ${v2===v3 ? "（同着）" : ""}`;
-
-      setTimeout(() => document.getElementById("correct1").classList.add("show"), 200);
-      setTimeout(() => document.getElementById("correct2").classList.add("show"), 600);
-      setTimeout(() => document.getElementById("correct3").classList.add("show"), 1000);
+      document.getElementById("rank2").textContent =
+        `2着：プレイヤー${actual2} ${v1===v2 || v2===v3 ? "（同着）" : ""}`;
+      document.getElementById("rank1").textContent =
+        `1着：プレイヤー${actual1} ${v1===v2 ? "（同着）" : ""}`;
 
       /* ✅ 3連単予想を取得 */
       const trifectaSnap = await getDocs(trifectaCol);
@@ -234,8 +233,8 @@
         })
         .sort((a, b) => b.hit - a.hit);
 
+      /* ✅ 結果一覧を生成（最初は非表示） */
       board.innerHTML = "";
-
       sortedHistory.forEach((h, index) => {
         const div = document.createElement("div");
         div.className = "item";
@@ -247,9 +246,9 @@
 
           <div class="rank-block">
             <strong>実際の着順</strong><br>
-            1着：${actual1} ${v1===v2 ? "（同着）" : ""}<br>
-            2着：${actual2} ${v2===v3 || v1===v2 ? "（同着）" : ""}<br>
-            3着：${actual3} ${v2===v3 ? "（同着）" : ""}<br>
+            1着：${actual1}<br>
+            2着：${actual2}<br>
+            3着：${actual3}<br>
           </div>
 
           <span class="${h.hit ? "hit" : "miss"}">
@@ -258,6 +257,40 @@
         `;
 
         board.appendChild(div);
+      });
+
+      /* ✅ タップで段階公開 */
+      setupTapReveal();
+    }
+
+    /* ✅ タップで段階公開 */
+    let step = 0;
+
+    function setupTapReveal() {
+      document.body.addEventListener("click", () => {
+        step++;
+
+        if (step === 1) {
+          // ✅ 最初のタップ → 自動スクロールして3着表示
+          document.getElementById("rank3").classList.add("show");
+          document.getElementById("correctBox").scrollIntoView({ behavior: "smooth" });
+        }
+
+        if (step === 2) {
+          // ✅ 2回目 → 2着表示
+          document.getElementById("rank2").classList.add("show");
+        }
+
+        if (step === 3) {
+          // ✅ 3回目 → 1着表示
+          document.getElementById("rank1").classList.add("show");
+        }
+
+        if (step === 4) {
+          // ✅ 4回目 → 結果一覧を表示
+          document.getElementById("resultBoard").style.display = "block";
+          document.getElementById("resultBoard").scrollIntoView({ behavior: "smooth" });
+        }
       });
     }
 
@@ -271,7 +304,7 @@
       }
 
       alert("履歴を削除しました");
-      loadAllResults();
+      location.reload();
     }
 
     window.clearHistory = clearHistory;

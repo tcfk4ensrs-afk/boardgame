@@ -94,12 +94,14 @@
     <label>参加プレイヤー人数</label>
     <input type="number" id="playerCount" min="1" max="20">
     <button id="savePlayerCount">人数を確定</button>
+    <p id="playerCountDisplay" style="margin-top:10px;"></p>
   </div>
 
   <div class="section">
     <label>合計数字の上限値</label>
     <input type="number" id="maxTotal" min="1">
     <button id="saveMaxTotal">上限を確定</button>
+    <p id="maxTotalDisplay" style="margin-top:10px;"></p>
   </div>
 
   <div class="section">
@@ -118,7 +120,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore, doc, getDoc, setDoc, updateDoc,
-      onSnapshot, collection, addDoc, getDocs
+      onSnapshot, collection, addDoc
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     /* ✅ Firebase 設定 */
@@ -140,19 +142,31 @@
     const playersCol = collection(db, "players");
     const historyCol = collection(db, "history");
 
-    /* ✅ 設定を読み込む（リアルタイム） */
+    /* ✅ 表示更新関数 */
+    function updateSettingDisplays(playerCount, maxTotal) {
+      document.getElementById("playerCountDisplay").textContent =
+        `現在のプレイヤー人数：${playerCount}人`;
+
+      document.getElementById("maxTotalDisplay").textContent =
+        `現在の上限値：${maxTotal}`;
+    }
+
+    /* ✅ Firestore 設定をリアルタイムで読み込む */
     onSnapshot(settingsRef, (snap) => {
       if (!snap.exists()) return;
 
       const data = snap.data();
+
       document.getElementById("playerCount").value = data.playerCount;
       document.getElementById("maxTotal").value = data.maxTotal;
+
+      updateSettingDisplays(data.playerCount, data.maxTotal);
 
       renderPlayers(data.playerCount);
       updateTotalDisplay();
     });
 
-    /* ✅ プレイヤー一覧を表示 */
+    /* ✅ プレイヤー一覧表示 */
     async function renderPlayers(count) {
       const list = document.getElementById("playerList");
       list.innerHTML = "";
@@ -168,14 +182,14 @@
       }
     }
 
-    /* ✅ プレイヤーの値を取得 */
+    /* ✅ プレイヤー値取得 */
     async function getPlayerValue(id) {
       const ref = doc(db, "players", String(id));
       const snap = await getDoc(ref);
       return snap.exists() ? snap.data().value : 5;
     }
 
-    /* ✅ プレイヤーの値を保存 */
+    /* ✅ プレイヤー値保存 */
     async function setPlayerValue(id, value) {
       await setDoc(doc(db, "players", String(id)), { value });
     }
@@ -230,11 +244,15 @@
     document.getElementById("savePlayerCount").onclick = async () => {
       const count = Number(document.getElementById("playerCount").value);
       await updateDoc(settingsRef, { playerCount: count });
+
+      updateSettingDisplays(count, Number(document.getElementById("maxTotal").value));
     };
 
     document.getElementById("saveMaxTotal").onclick = async () => {
       const max = Number(document.getElementById("maxTotal").value);
       await updateDoc(settingsRef, { maxTotal: max });
+
+      updateSettingDisplays(Number(document.getElementById("playerCount").value), max);
     };
 
     /* ✅ 全データリセット */

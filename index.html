@@ -259,19 +259,26 @@
       updateSettingDisplays(Number(document.getElementById("playerCount").value), max);
     };
 
-    /* ✅ 全データリセット */
-    document.getElementById("resetBtn").onclick = async () => {
-      if (!confirm("全データをリセットしますか？")) return;
+/* ✅ 全データリセット */
+document.getElementById("resetBtn").onclick = async () => {
+  if (!confirm("全データをリセットしますか？")) return;
 
-      const settingsSnap = await getDoc(settingsRef);
-      const count = settingsSnap.data().playerCount;
+  const settingsSnap = await getDoc(settingsRef);
+  const count = settingsSnap.data().playerCount;
 
-      for (let i = 1; i <= count; i++) {
-        await setPlayerValue(i, 5);
-      }
+  // ✅ プレイヤー値を初期化
+  for (let i = 1; i <= count; i++) {
+    await setPlayerValue(i, 5);
+  }
 
-      alert("全データをリセットしました");
-    };
+  // ✅ history コレクションを全削除
+  const historySnap = await getDocs(historyCol);
+  for (const d of historySnap.docs) {
+    await deleteDoc(doc(db, "history", d.id));
+  }
+
+  alert("全データをリセットしました");
+};
   </script>
 
 </body>

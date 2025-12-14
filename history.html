@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>値の変遷履歴</title>
+  <title>値の変遷履歴（Firebase版）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -75,28 +75,38 @@
   <!-- ✅ Chart.js 読み込み -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-</head>
-<body>
+  <!-- ✅ Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, deleteDoc, doc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  <h1>📊 値の変遷履歴（折れ線グラフ付き）</h1>
+    /* ✅ Firebase 設定 */
+    const firebaseConfig = {
+      apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
+      authDomain: "sanrentan-6adc0.firebaseapp.com",
+      projectId: "sanrentan-6adc0",
+      storageBucket: "sanrentan-6adc0.firebasestorage.app",
+      messagingSenderId: "920208181022",
+      appId: "1:920208181022:web:bb3a050055fb9a40782b0f",
+      measurementId: "G-43N8MYJW96"
+    };
 
-  <!-- ✅ 全プレイヤー重ね書きグラフ -->
-  <div class="player-block">
-    <div class="player-title">全プレイヤーの推移（重ね書き）</div>
-    <canvas id="allPlayersChart"></canvas>
-  </div>
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  <div id="historyArea"></div>
+    const historyCol = collection(db, "history");
 
-  <div class="btn-area">
-    <button class="btn" onclick="location.href='index.html'">ホームに戻る</button>
-    <button class="btn btn-danger" onclick="clearHistory()">履歴を削除</button>
-  </div>
-
-  <script>
-    function loadHistory() {
-      const history = JSON.parse(localStorage.getItem("player_value_history") || "[]");
+    /* ✅ Firestore から履歴を読み込む */
+    async function loadHistory() {
       const area = document.getElementById("historyArea");
+      area.innerHTML = "<p>読み込み中...</p>";
+
+      const snap = await getDocs(historyCol);
+      const history = [];
+
+      snap.forEach(doc => history.push(doc.data()));
 
       if (history.length === 0) {
         area.innerHTML = "<p>まだ履歴がありません。</p>";
@@ -110,9 +120,15 @@
         grouped[h.player].push(h);
       });
 
-      /* -----------------------------------------
-         ✅ まず「全プレイヤー重ね書きグラフ」を描画
-      ----------------------------------------- */
+      /* ✅ 全プレイヤー重ね書きグラフ */
+      drawAllPlayersChart(grouped);
+
+      /* ✅ 個別プレイヤーの履歴表示 */
+      drawPlayerBlocks(grouped);
+    }
+
+    /* ✅ 全プレイヤー重ね書きグラフ */
+    function drawAllPlayersChart(grouped) {
       const allCanvas = document.getElementById("allPlayersChart");
 
       const colorList = [
@@ -121,42 +137,36 @@
         "#cddc39", "#009688", "#3f51b5", "#ff5722", "#673ab7"
       ];
 
-      const datasets = Object.keys(grouped).map((playerId, index) => {
-        return {
-          label: `プレイヤー${playerId}`,
-          data: grouped[playerId].map(h => h.after),
-          borderColor: colorList[index % colorList.length],
-          backgroundColor: "transparent",
-          borderWidth: 3,
-          tension: 0.3,
-          pointRadius: 4,
-          pointBackgroundColor: colorList[index % colorList.length]
-        };
-      });
+      const datasets = Object.keys(grouped).map((playerId, index) => ({
+        label: `プレイヤー${playerId}`,
+        data: grouped[playerId].map(h => h.after),
+        borderColor: colorList[index % colorList.length],
+        backgroundColor: "transparent",
+        borderWidth: 3,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: colorList[index % colorList.length]
+      }));
 
       const maxLength = Math.max(...Object.values(grouped).map(arr => arr.length));
       const labels = Array.from({ length: maxLength }, (_, i) => `#${i + 1}`);
 
       new Chart(allCanvas, {
         type: "line",
-        data: {
-          labels: labels,
-          datasets: datasets
-        },
+        data: { labels, datasets },
         options: {
-          plugins: {
-            legend: { labels: { color: "#fff" } }
-          },
+          plugins: { legend: { labels: { color: "#fff" } } },
           scales: {
             x: { ticks: { color: "#fff" } },
             y: { ticks: { color: "#fff" } }
           }
         }
       });
+    }
 
-      /* -----------------------------------------
-         ✅ 個別プレイヤーのグラフ＋履歴一覧
-      ----------------------------------------- */
+    /* ✅ 個別プレイヤーの履歴ブロック */
+    function drawPlayerBlocks(grouped) {
+      const area = document.getElementById("historyArea");
       area.innerHTML = "";
 
       Object.keys(grouped).sort((a, b) => a - b).forEach(playerId => {
@@ -170,15 +180,18 @@
         canvas.style.marginBottom = "20px";
         block.appendChild(canvas);
 
-        grouped[playerId].slice().reverse().forEach(h => {
-          const div = document.createElement("div");
-          div.className = "item";
-          div.innerHTML = `
-            <strong>${h.time}</strong><br>
-            ${h.before} → ${h.after} （${h.diff > 0 ? "+" : ""}${h.diff}）
-          `;
-          block.appendChild(div);
-        });
+        grouped[playerId]
+          .sort((a, b) => new Date(a.time) - new Date(b.time))
+          .forEach(h => {
+            const div = document.createElement("div");
+            div.className = "item";
+            div.innerHTML = `
+              <strong>${h.time}</strong><br>
+              ${h.before} → ${h.after} （${h.diff > 0 ? "+" : ""}${h.diff}）
+              ${h.penalty ? "<span style='color:red;'>【ペナルティ】</span>" : ""}
+            `;
+            block.appendChild(div);
+          });
 
         area.appendChild(block);
 
@@ -188,7 +201,7 @@
         new Chart(canvas, {
           type: "line",
           data: {
-            labels: labels,
+            labels,
             datasets: [{
               label: `プレイヤー${playerId} の値の推移`,
               data: values,
@@ -201,9 +214,7 @@
             }]
           },
           options: {
-            plugins: {
-              legend: { labels: { color: "#fff" } }
-            },
+            plugins: { legend: { labels: { color: "#fff" } } },
             scales: {
               x: { ticks: { color: "#fff" } },
               y: { ticks: { color: "#fff" } }
@@ -213,12 +224,22 @@
       });
     }
 
-    function clearHistory() {
+    /* ✅ 履歴削除（Firestore版） */
+    async function clearHistory() {
       if (!confirm("本当に履歴を削除しますか？")) return;
-      localStorage.removeItem("player_value_history");
+
+      const snap = await getDocs(historyCol);
+      for (const d of snap.docs) {
+        await deleteDoc(doc(db, "history", d.id));
+      }
+
+      alert("履歴を削除しました");
       loadHistory();
     }
 
+    window.clearHistory = clearHistory;
+
+    /* ✅ 初期読み込み */
     loadHistory();
   </script>
 

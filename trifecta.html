@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>3連単入力</title>
+  <title>3連単入力（Firebase版）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -99,15 +99,36 @@
     </div>
   </div>
 
-  <script>
-    const PLAYER_COUNT_KEY = "playerCount";
+  <!-- ✅ Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, collection, addDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    function loadPlayerCount() {
-      return parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
-    }
+    /* ✅ Firebase 設定 */
+    const firebaseConfig = {
+      apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
+      authDomain: "sanrentan-6adc0.firebaseapp.com",
+      projectId: "sanrentan-6adc0",
+      storageBucket: "sanrentan-6adc0.firebasestorage.app",
+      messagingSenderId: "920208181022",
+      appId: "1:920208181022:web:bb3a050055fb9a40782b0f",
+      measurementId: "G-43N8MYJW96"
+    };
 
-    function createOptions() {
-      const count = loadPlayerCount();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const settingsRef = doc(db, "settings", "global");
+    const trifectaCol = collection(db, "trifecta");
+
+    /* ✅ Firestore からプレイヤー人数を取得して選択肢を作成 */
+    async function createOptions() {
+      const snap = await getDoc(settingsRef);
+      if (!snap.exists()) return;
+
+      const count = snap.data().playerCount;
       const selects = ["first", "second", "third"];
 
       selects.forEach(id => {
@@ -122,7 +143,8 @@
       });
     }
 
-    function saveTrifecta() {
+    /* ✅ Firestore に3連単を保存 */
+    async function saveTrifecta() {
       const name = document.getElementById("playerName").value.trim();
       const first = document.getElementById("first").value;
       const second = document.getElementById("second").value;
@@ -138,13 +160,20 @@
         return;
       }
 
-      const history = JSON.parse(localStorage.getItem("trifecta_history") || "[]");
-      history.push({ name, first, second, third });
-      localStorage.setItem("trifecta_history", JSON.stringify(history));
+      await addDoc(trifectaCol, {
+        name,
+        first: Number(first),
+        second: Number(second),
+        third: Number(third),
+        time: new Date().toLocaleString()
+      });
 
       document.getElementById("closingMsg").style.display = "block";
 
-      setTimeout(() => window.close(), 5000);
+      setTimeout(() => {
+        window.open('', '_self');
+        window.close();
+      }, 5000);
 
       window.location.href = "results_all.html";
     }

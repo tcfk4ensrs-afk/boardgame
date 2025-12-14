@@ -217,7 +217,7 @@
       const resultArea = document.getElementById("resultArea");
       resultArea.innerHTML = "";
 
-   if (!guess || guess < 1 || guess > 100) {
+ if (!guess || guess < 1 || guess > 100) {
   alert("1〜100 の数字を入力してください。");
   return;
 }
@@ -234,12 +234,15 @@ if (guess === correctNumber) {
 
   resultArea.innerHTML = `
     <div class="success-anim">🎉 成功！値が半分になりました！</div>
-    <p>正解：${correctNumber}</p>
+    <p>正解は ${correctNumber} でした！</p>
   `;
 } else {
+  // ✅ ヒントを出す（高い / 低い）
+  const hint = guess < correctNumber ? "もっと高い！" : "もっと低い！";
+
   resultArea.innerHTML = `
     <div class="fail-msg">❌ 失敗！</div>
-    <p>正解：${correctNumber}</p>
+    <p>${hint}</p>
   `;
 }
 

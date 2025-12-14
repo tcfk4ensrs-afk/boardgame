@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>3連単ゲーム - ホーム</title>
+  <title>3連単ゲーム - ホーム（Firebase版）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -11,7 +11,6 @@
       padding: 20px;
       text-align: center;
     }
-
     h1 {
       font-size: 2.2em;
       color: #ffeb3b;
@@ -20,7 +19,6 @@
       font-weight: bold;
       letter-spacing: 2px;
     }
-
     .section {
       background: rgba(0, 0, 0, 0.4);
       padding: 15px;
@@ -31,14 +29,12 @@
       border: 2px solid #ffeb3b;
       box-shadow: 0 0 10px rgba(255, 235, 59, 0.4);
     }
-
     label {
       display: block;
       margin: 10px 0 5px;
       font-size: 1.1em;
       font-weight: bold;
     }
-
     input[type="number"] {
       width: 120px;
       padding: 8px;
@@ -47,7 +43,6 @@
       font-size: 1.1em;
       text-align: center;
     }
-
     button {
       margin-top: 10px;
       padding: 10px 20px;
@@ -60,11 +55,9 @@
       cursor: pointer;
       box-shadow: 0 0 10px #ffeb3b;
     }
-
     button:hover {
       background: #fff176;
     }
-
     .player-card {
       background: #1b5e20;
       padding: 12px;
@@ -78,17 +71,14 @@
       text-align: left;
       padding-left: 20px;
     }
-
     a {
       color: #ffeb3b;
       text-decoration: none;
       font-weight: bold;
     }
-
     a:hover {
       text-decoration: underline;
     }
-
     #currentTotal {
       font-size: 1.6em;
       font-weight: bold;
@@ -98,17 +88,17 @@
 </head>
 <body>
 
-  <h1>🏇 3連単ゲーム</h1>
+  <h1>🏇 3連単ゲーム（Firebase版）</h1>
 
   <div class="section">
     <label>参加プレイヤー人数</label>
-    <input type="number" id="playerCount" min="1" max="20" value="3">
+    <input type="number" id="playerCount" min="1" max="20">
     <button id="savePlayerCount">人数を確定</button>
   </div>
 
   <div class="section">
     <label>合計数字の上限値</label>
-    <input type="number" id="maxTotal" min="1" value="100">
+    <input type="number" id="maxTotal" min="1">
     <button id="saveMaxTotal">上限を確定</button>
   </div>
 
@@ -123,92 +113,49 @@
     <button id="resetBtn">リセット（全データ初期化）</button>
   </div>
 
-  <script>
-    const DEFAULT_VALUE = 5;
-    const PLAYER_COUNT_KEY = "playerCount";
-    const MAX_TOTAL_KEY = "maxTotal";
+  <!-- ✅ Firebase SDK 読み込み -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, updateDoc,
+      onSnapshot, collection, addDoc, getDocs
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    /* ------------------------------
-       値の取得・保存
-    ------------------------------ */
-    function getPlayerValue(playerId) {
-      const key = "player_" + playerId + "_value";
-      const stored = localStorage.getItem(key);
-      return stored ? parseInt(stored, 10) : DEFAULT_VALUE;
-    }
+    /* ✅ Firebase 設定 */
+    const firebaseConfig = {
+      apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
+      authDomain: "sanrentan-6adc0.firebaseapp.com",
+      projectId: "sanrentan-6adc0",
+      storageBucket: "sanrentan-6adc0.firebasestorage.app",
+      messagingSenderId: "920208181022",
+      appId: "1:920208181022:web:bb3a050055fb9a40782b0f",
+      measurementId: "G-43N8MYJW96"
+    };
 
-    function setPlayerValue(playerId, value) {
-      const key = "player_" + playerId + "_value";
-      localStorage.setItem(key, String(value));
-    }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    /* ------------------------------
-       ペナルティ履歴保存
-    ------------------------------ */
-    function savePenaltyHistory(playerId, before, after) {
-      const history = JSON.parse(localStorage.getItem("player_value_history") || "[]");
+    /* ✅ Firestore 参照 */
+    const settingsRef = doc(db, "settings", "global");
+    const playersCol = collection(db, "players");
+    const historyCol = collection(db, "history");
 
-      history.push({
-        player: playerId,
-        before: before,
-        after: after,
-        diff: after - before,
-        time: new Date().toLocaleString(),
-        penalty: true
-      });
+    /* ✅ 設定を読み込む（リアルタイム） */
+    onSnapshot(settingsRef, (snap) => {
+      if (!snap.exists()) return;
 
-      localStorage.setItem("player_value_history", JSON.stringify(history));
-    }
+      const data = snap.data();
+      document.getElementById("playerCount").value = data.playerCount;
+      document.getElementById("maxTotal").value = data.maxTotal;
 
-    /* ------------------------------
-       設定読み込み
-    ------------------------------ */
-    function loadSettings() {
-      const storedCount = localStorage.getItem(PLAYER_COUNT_KEY);
-      if (storedCount !== null) {
-        document.getElementById("playerCount").value = storedCount;
-      }
-
-      const storedMax = localStorage.getItem(MAX_TOTAL_KEY);
-      if (storedMax !== null) {
-        document.getElementById("maxTotal").value = storedMax;
-      }
-    }
-
-    /* ------------------------------
-       プレイヤー人数保存
-    ------------------------------ */
-    function savePlayerCount() {
-      const count = parseInt(document.getElementById("playerCount").value, 10);
-      if (isNaN(count) || count < 1) {
-        alert("プレイヤー人数は1以上の数値を入力してください。");
-        return;
-      }
-      localStorage.setItem(PLAYER_COUNT_KEY, String(count));
-      renderPlayers();
-    }
-
-    /* ------------------------------
-       上限値保存
-    ------------------------------ */
-    function saveMaxTotal() {
-      const max = parseInt(document.getElementById("maxTotal").value, 10);
-      if (isNaN(max) || max < 1) {
-        alert("上限値は1以上の数値を入力してください。");
-        return;
-      }
-      localStorage.setItem(MAX_TOTAL_KEY, String(max));
+      renderPlayers(data.playerCount);
       updateTotalDisplay();
-    }
+    });
 
-    /* ------------------------------
-       プレイヤー一覧表示
-    ------------------------------ */
-    function renderPlayers() {
+    /* ✅ プレイヤー一覧を表示 */
+    async function renderPlayers(count) {
       const list = document.getElementById("playerList");
       list.innerHTML = "";
-
-      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
 
       for (let i = 1; i <= count; i++) {
         const div = document.createElement("div");
@@ -219,87 +166,90 @@
         `;
         list.appendChild(div);
       }
-
-      updateTotalDisplay();
     }
 
-    /* ------------------------------
-       合計値表示 + ペナルティ処理
-    ------------------------------ */
-    function updateTotalDisplay() {
-      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
-      let total = 0;
+    /* ✅ プレイヤーの値を取得 */
+    async function getPlayerValue(id) {
+      const ref = doc(db, "players", String(id));
+      const snap = await getDoc(ref);
+      return snap.exists() ? snap.data().value : 5;
+    }
 
-      for (let i = 1; i <= count; i++) {
-        total += getPlayerValue(i);
+    /* ✅ プレイヤーの値を保存 */
+    async function setPlayerValue(id, value) {
+      await setDoc(doc(db, "players", String(id)), { value });
+    }
+
+    /* ✅ 履歴保存 */
+    async function saveHistory(player, before, after, penalty) {
+      await addDoc(historyCol, {
+        player,
+        before,
+        after,
+        diff: after - before,
+        time: new Date().toLocaleString(),
+        penalty
+      });
+    }
+
+    /* ✅ 合計値表示 + ペナルティ処理 */
+    async function updateTotalDisplay() {
+      const settingsSnap = await getDoc(settingsRef);
+      if (!settingsSnap.exists()) return;
+
+      const { playerCount, maxTotal } = settingsSnap.data();
+
+      let total = 0;
+      const values = [];
+
+      for (let i = 1; i <= playerCount; i++) {
+        const v = await getPlayerValue(i);
+        values.push({ id: i, value: v });
+        total += v;
       }
 
-      const currentTotalEl = document.getElementById("currentTotal");
-      currentTotalEl.textContent = total;
-
-      const maxTotal = parseInt(localStorage.getItem(MAX_TOTAL_KEY) || "100", 10);
+      document.getElementById("currentTotal").textContent = total;
       document.getElementById("maxTotalLabel").textContent = `上限：${maxTotal}`;
 
-      currentTotalEl.style.color = total > maxTotal ? "red" : "#ffeb3b";
-
-      /* ✅ ペナルティ処理（1位の値を半分にする） */
+      /* ✅ ペナルティ発動 */
       if (total > maxTotal) {
-        const values = [];
-        for (let i = 1; i <= count; i++) {
-          values.push({ id: i, value: getPlayerValue(i) });
-        }
-
         values.sort((a, b) => b.value - a.value);
+        const top = values[0];
 
-        const topPlayer = values[0].id;
-        const before = values[0].value;
-
+        const before = top.value;
         const after = Math.floor(before / 2);
-        setPlayerValue(topPlayer, after);
 
-        /* ✅ 履歴にペナルティとして記録 */
-        savePenaltyHistory(topPlayer, before, after);
+        await setPlayerValue(top.id, after);
+        await saveHistory(top.id, before, after, true);
 
         alert("⚠ 上限を超えたため、ペナルティが適用されました");
-
-        renderPlayers();
-        return;
       }
     }
 
-    /* ------------------------------
-       全データリセット
-    ------------------------------ */
-    function resetAllPlayers() {
-      if (!confirm("全データを完全にリセットします。よろしいですか？")) return;
+    /* ✅ 設定保存 */
+    document.getElementById("savePlayerCount").onclick = async () => {
+      const count = Number(document.getElementById("playerCount").value);
+      await updateDoc(settingsRef, { playerCount: count });
+    };
 
-      const count = parseInt(localStorage.getItem(PLAYER_COUNT_KEY) || "3", 10);
+    document.getElementById("saveMaxTotal").onclick = async () => {
+      const max = Number(document.getElementById("maxTotal").value);
+      await updateDoc(settingsRef, { maxTotal: max });
+    };
+
+    /* ✅ 全データリセット */
+    document.getElementById("resetBtn").onclick = async () => {
+      if (!confirm("全データをリセットしますか？")) return;
+
+      const settingsSnap = await getDoc(settingsRef);
+      const count = settingsSnap.data().playerCount;
 
       for (let i = 1; i <= count; i++) {
-        setPlayerValue(i, DEFAULT_VALUE);
+        await setPlayerValue(i, 5);
       }
 
-      localStorage.removeItem("trifecta_history");
-      localStorage.removeItem("player_value_history");
-
-      alert("全データをリセットしました。");
-
-      renderPlayers();
-      updateTotalDisplay();
-    }
-
-    /* ------------------------------
-       イベント登録
-    ------------------------------ */
-    document.getElementById("savePlayerCount").addEventListener("click", savePlayerCount);
-    document.getElementById("saveMaxTotal").addEventListener("click", saveMaxTotal);
-    document.getElementById("resetBtn").addEventListener("click", resetAllPlayers);
-
-    /* ------------------------------
-       初期表示
-    ------------------------------ */
-    loadSettings();
-    renderPlayers();
+      alert("全データをリセットしました");
+    };
   </script>
 
 </body>

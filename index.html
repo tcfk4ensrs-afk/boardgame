@@ -160,6 +160,7 @@
       document.getElementById("playerCount").value = data.playerCount;
       document.getElementById("maxTotal").value = data.maxTotal;
 
+      // ✅ Firestore の値を画面に反映
       updateSettingDisplays(data.playerCount, data.maxTotal);
 
       renderPlayers(data.playerCount);
@@ -240,18 +241,21 @@
       }
     }
 
-    /* ✅ 設定保存 */
+    /* ✅ 設定保存（人数） */
     document.getElementById("savePlayerCount").onclick = async () => {
       const count = Number(document.getElementById("playerCount").value);
       await updateDoc(settingsRef, { playerCount: count });
 
+      // ✅ 即時表示更新
       updateSettingDisplays(count, Number(document.getElementById("maxTotal").value));
     };
 
+    /* ✅ 設定保存（上限） */
     document.getElementById("saveMaxTotal").onclick = async () => {
       const max = Number(document.getElementById("maxTotal").value);
       await updateDoc(settingsRef, { maxTotal: max });
 
+      // ✅ 即時表示更新
       updateSettingDisplays(Number(document.getElementById("playerCount").value), max);
     };
 

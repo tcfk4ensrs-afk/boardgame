@@ -217,29 +217,32 @@
       const resultArea = document.getElementById("resultArea");
       resultArea.innerHTML = "";
 
-      if (!guess || guess < 1 || guess > 100) {
-        alert("1〜100 の数字を入力してください。");
-        return;
-      }
+   if (!guess || guess < 1 || guess > 100) {
+  alert("1〜100 の数字を入力してください。");
+  return;
+}
 
-      const correctNumber = Math.floor(Math.random() * 100) + 1;
+// ✅ 正解は「選択されたプレイヤーの現在値」
+const correctNumber = await getPlayerValue(playerId);
 
-      if (guess === correctNumber) {
-        const before = await getPlayerValue(playerId);
-        const after = Math.floor(before / 2);
+if (guess === correctNumber) {
+  const before = correctNumber;
+  const after = Math.floor(before / 2);
 
-        await setPlayerValue(playerId, after);
-        await saveHistory(playerId, before, after);
+  await setPlayerValue(playerId, after);
+  await saveHistory(playerId, before, after);
 
-        resultArea.innerHTML = `
-          <div class="success-anim">🎉 成功！値が半分になりました！</div>
-          <p>正解：${correctNumber}</p>
-        `;
-      } else {
-        resultArea.innerHTML = `
-          <div class="fail-msg">❌ 失敗！</div>
-          <p>正解：${correctNumber}</p>
-        `;
+  resultArea.innerHTML = `
+    <div class="success-anim">🎉 成功！値が半分になりました！</div>
+    <p>正解：${correctNumber}</p>
+  `;
+} else {
+  resultArea.innerHTML = `
+    <div class="fail-msg">❌ 失敗！</div>
+    <p>正解：${correctNumber}</p>
+  `;
+}
+
       }
     };
 
@@ -278,7 +281,7 @@
         const id = Number(doc.id);
         const value = doc.data().value;
         if (value > threshold) {
-          list.push(`プレイヤー${id}（${value}）`);
+          list.push(`プレイヤー${id}`);
         }
       });
 

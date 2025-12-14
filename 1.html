@@ -6,30 +6,57 @@
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
-      background: #000;
-      color: #ffeb3b;
+      background: #0b3d0b;
+      color: #fff;
       padding: 20px;
       text-align: center;
     }
-    h1 {
-      font-size: 2em;
-      margin-bottom: 20px;
-      text-shadow: 0 0 10px #ffeb3b;
-      letter-spacing: 2px;
-    }
-    .value-box {
-      font-size: 3em;
-      margin: 20px 0;
-      padding: 20px;
-      background: #111;
-      border: 3px solid #ffeb3b;
-      border-radius: 10px;
+
+    .player-badge {
       display: inline-block;
-      width: 200px;
+      background: #ffeb3b;
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-size: 1.6em;
+      font-weight: bold;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px #ffeb3b;
     }
+
+    .value-box {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 15px;
+      margin: 15px auto;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      border: 2px solid #ffeb3b;
+      box-shadow: 0 0 10px rgba(255, 235, 59, 0.4);
+      font-size: 1.3em;
+    }
+
+    #currentValue {
+      font-size: 2em;
+      color: #ffeb3b;
+      font-weight: bold;
+    }
+
+    #currentRank {
+      font-size: 1.5em;
+      color: #ffeb3b;
+      font-weight: bold;
+      margin-top: 10px;
+      text-shadow: 0 0 8px #ffeb3b;
+    }
+
+    .btn-area {
+      margin-top: 20px;
+    }
+
     button {
-      padding: 15px 25px;
-      margin: 10px;
+      margin: 8px;
+      padding: 12px 20px;
       font-size: 1.2em;
       border: none;
       border-radius: 8px;
@@ -39,30 +66,45 @@
       cursor: pointer;
       box-shadow: 0 0 10px #ffeb3b;
     }
-    button:hover {
-      background: #fff176;
+
+    button:disabled {
+      background: #777;
+      color: #333;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .closing-msg {
+      margin-top: 20px;
+      font-size: 1.1em;
+      color: #ffeb3b;
+      display: none;
     }
   </style>
 </head>
 <body>
 
-  <h1>プレイヤー1</h1>
+  <div class="player-badge">プレイヤー 1</div>
 
-  <div class="value-box" id="valueBox">-</div>
+  <div class="value-box">
+    <p>現在の値：</p>
+    <div id="currentValue">-</div>
 
-  <div>
-    <button onclick="changeValue(-1)">－1</button>
-    <button onclick="changeValue(1)">＋1</button>
+    <p>順位：</p>
+    <div id="currentRank">-</div>
   </div>
 
-  <div>
-    <button onclick="changeValue(-5)">－5</button>
-    <button onclick="changeValue(5)">＋5</button>
+  <div class="btn-area">
+    <button data-diff="-3">-3</button>
+    <button data-diff="-2">-2</button>
+    <button data-diff="-1">-1</button>
+    <button data-diff="1">+1</button>
+    <button data-diff="3">+3</button>
+    <button data-diff="10">+10</button>
   </div>
 
-  <div>
-    <button onclick="changeValue(-10)">－10</button>
-    <button onclick="changeValue(10)">＋10</button>
+  <div class="closing-msg" id="closingMsg">
+    入力を保存しました。5秒後にタブを閉じます…
   </div>
 
   <script type="module">
@@ -70,7 +112,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore, doc, getDoc, setDoc, updateDoc,
-      onSnapshot, collection, addDoc
+      onSnapshot, collection, addDoc, getDocs
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     /* ✅ Firebase 設定 */
@@ -88,40 +130,94 @@
     const db = getFirestore(app);
 
     /* ✅ このページのプレイヤーID */
-    const playerId = 1;
+    const PLAYER_ID = 1;
 
     /* ✅ Firestore 参照 */
-    const playerRef = doc(db, "players", String(playerId));
+    const playerRef = doc(db, "players", String(PLAYER_ID));
+    const settingsRef = doc(db, "settings", "global");
     const historyCol = collection(db, "history");
 
     /* ✅ Firestore からリアルタイムで値を取得 */
     onSnapshot(playerRef, (snap) => {
       if (snap.exists()) {
-        document.getElementById("valueBox").textContent = snap.data().value;
+        document.getElementById("currentValue").textContent = snap.data().value;
       }
     });
 
+    /* ✅ 順位計算（Firestoreから全プレイヤー値を取得） */
+    async function calcRank() {
+      const settingsSnap = await getDoc(settingsRef);
+      if (!settingsSnap.exists()) return;
+
+      const playerCount = settingsSnap.data().playerCount;
+
+      const values = [];
+      for (let i = 1; i <= playerCount; i++) {
+        const snap = await getDoc(doc(db, "players", String(i)));
+        values.push(snap.exists() ? snap.data().value : 5);
+      }
+
+      const mySnap = await getDoc(playerRef);
+      const myValue = mySnap.exists() ? mySnap.data().value : 5;
+
+      const sorted = [...values].sort((a, b) => b - a);
+      const rank = sorted.indexOf(myValue) + 1;
+
+      document.getElementById("currentRank").textContent =
+        `${rank} 位 / ${playerCount} 人`;
+    }
+
     /* ✅ 履歴保存 */
-    async function saveHistory(before, after) {
+    async function saveHistory(before, after, diff) {
       await addDoc(historyCol, {
-        player: playerId,
+        player: PLAYER_ID,
         before,
         after,
-        diff: after - before,
+        diff,
         time: new Date().toLocaleString(),
         penalty: false
       });
     }
 
-    /* ✅ 値を変更する */
-    async function changeValue(diff) {
+    /* ✅ ボタン無効化 */
+    function disableButtons() {
+      document.querySelectorAll("button[data-diff]").forEach(btn => {
+        btn.disabled = true;
+      });
+    }
+
+    /* ✅ タブを閉じる */
+    function scheduleCloseTab() {
+      document.getElementById("closingMsg").style.display = "block";
+      setTimeout(() => window.close(), 5000);
+    }
+
+    /* ✅ 値変更処理 */
+    async function onButtonClick(diff) {
+      disableButtons();
+
       const snap = await getDoc(playerRef);
       const before = snap.exists() ? snap.data().value : 5;
       const after = before + diff;
 
       await setDoc(playerRef, { value: after });
-      await saveHistory(before, after);
+      await saveHistory(before, after, diff);
+
+      document.getElementById("currentValue").textContent = after;
+
+      scheduleCloseTab();
     }
+
+    /* ✅ ボタンイベント登録 */
+    document.querySelectorAll("button[data-diff]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const diff = parseInt(btn.getAttribute("data-diff"), 10);
+        onButtonClick(diff);
+      });
+    });
+
+    /* ✅ 初期表示 */
+    calcRank();
   </script>
 
 </body>

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>全員の結果一覧</title>
+  <title>全員の結果一覧（Firebase版）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -111,7 +111,6 @@
 
   <h1>🏇 全員の結果一覧</h1>
 
-  <!-- ✅ 正解の3連単（実際の着順）を最上部に表示 -->
   <div class="correct-box">
     <h2>🎯 正解の3連単</h2>
     <div id="correct1" class="rank-line">1着：</div>
@@ -126,18 +125,36 @@
     <button class="btn btn-danger" onclick="clearHistory()">履歴をすべて削除</button>
   </div>
 
-  <script>
-    function getPlayerValue(id) {
-      const v = localStorage.getItem("player_" + id + "_value");
-      return v ? parseInt(v, 10) : 5;
-    }
+  <!-- ✅ Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, collection, getDocs, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // ✅ 同着対応の最強判定ロジック
+    /* ✅ Firebase 設定 */
+    const firebaseConfig = {
+      apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
+      authDomain: "sanrentan-6adc0.firebaseapp.com",
+      projectId: "sanrentan-6adc0",
+      storageBucket: "sanrentan-6adc0.firebasestorage.app",
+      messagingSenderId: "920208181022",
+      appId: "1:920208181022:web:bb3a050055fb9a40782b0f",
+      measurementId: "G-43N8MYJW96"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const settingsRef = doc(db, "settings", "global");
+    const playersCol = collection(db, "players");
+    const trifectaCol = collection(db, "trifecta");
+
+    /* ✅ 同着対応ロジック（そのまま使用） */
     function isHitWithTies(pred, actual, values) {
       const v = {};
       values.forEach(p => v[p.id] = p.value);
 
-      // 1位・2位が同着
       if (v[actual[0]] === v[actual[1]]) {
         const setPred = new Set([pred[0], pred[1]]);
         const setActual = new Set([actual[0], actual[1]]);
@@ -145,7 +162,6 @@
         return ok12 && pred[2] === actual[2];
       }
 
-      // 2位・3位が同着
       if (v[actual[1]] === v[actual[2]]) {
         if (pred[0] !== actual[0]) return false;
         const setPred = new Set([pred[1], pred[2]]);
@@ -153,14 +169,12 @@
         return [...setPred].every(x => setActual.has(x));
       }
 
-      // 全部同着
       if (v[actual[0]] === v[actual[1]] && v[actual[1]] === v[actual[2]]) {
         const setPred = new Set(pred);
         const setActual = new Set(actual);
         return [...setPred].every(x => setActual.has(x));
       }
 
-      // 通常の3連単
       return (
         pred[0] === actual[0] &&
         pred[1] === actual[1] &&
@@ -168,15 +182,20 @@
       );
     }
 
-    function loadAllResults() {
-      const history = JSON.parse(localStorage.getItem("trifecta_history") || "[]");
+    /* ✅ Firestore から全データを読み込んで結果を表示 */
+    async function loadAllResults() {
       const board = document.getElementById("resultBoard");
 
-      const count = parseInt(localStorage.getItem("playerCount") || "3", 10);
+      /* ✅ プレイヤー人数取得 */
+      const settingsSnap = await getDoc(settingsRef);
+      const playerCount = settingsSnap.data().playerCount;
+
+      /* ✅ プレイヤー値取得 */
       const values = [];
-      for (let i = 1; i <= count; i++) {
-        values.push({ id: i, value: getPlayerValue(i) });
-      }
+      const playersSnap = await getDocs(playersCol);
+      playersSnap.forEach(doc => {
+        values.push({ id: Number(doc.id), value: doc.data().value });
+      });
 
       values.sort((a, b) => b.value - a.value);
 
@@ -188,7 +207,7 @@
       const v2 = values[1].value;
       const v3 = values[2].value;
 
-      // ✅ 正解の3連単を最上部に表示
+      /* ✅ 正解の3連単表示 */
       document.getElementById("correct1").textContent =
         `1着：プレイヤー${actual1} ${v1===v2 ? "（同着）" : ""}`;
       document.getElementById("correct2").textContent =
@@ -200,7 +219,12 @@
       setTimeout(() => document.getElementById("correct2").classList.add("show"), 600);
       setTimeout(() => document.getElementById("correct3").classList.add("show"), 1000);
 
-      // ✅ 的中者を上に表示するために並べ替え
+      /* ✅ 3連単予想を取得 */
+      const trifectaSnap = await getDocs(trifectaCol);
+      const history = [];
+      trifectaSnap.forEach(doc => history.push(doc.data()));
+
+      /* ✅ 的中判定 */
       const sortedHistory = history
         .map(h => {
           const predicted = [Number(h.first), Number(h.second), Number(h.third)];
@@ -208,7 +232,7 @@
           const hit = isHitWithTies(predicted, actual, values);
           return { ...h, hit };
         })
-        .sort((a, b) => b.hit - a.hit); // ✅ 的中者が上
+        .sort((a, b) => b.hit - a.hit);
 
       board.innerHTML = "";
 
@@ -237,11 +261,20 @@
       });
     }
 
-    function clearHistory() {
+    /* ✅ Firestore の trifecta を全削除 */
+    async function clearHistory() {
       if (!confirm("本当に履歴をすべて削除しますか？")) return;
-      localStorage.removeItem("trifecta_history");
+
+      const snap = await getDocs(trifectaCol);
+      for (const d of snap.docs) {
+        await deleteDoc(doc(db, "trifecta", d.id));
+      }
+
+      alert("履歴を削除しました");
       loadAllResults();
     }
+
+    window.clearHistory = clearHistory;
 
     loadAllResults();
   </script>

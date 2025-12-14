@@ -141,6 +141,7 @@
     onSnapshot(playerRef, (snap) => {
       if (snap.exists()) {
         document.getElementById("currentValue").textContent = snap.data().value;
+        calcRank();  // ✅ 順位もリアルタイム更新
       }
     });
 
@@ -167,7 +168,7 @@
         `${rank} 位 / ${playerCount} 人`;
     }
 
-    /* ✅ 履歴保存 */
+    /* ✅ 履歴保存（毎回記録） */
     async function saveHistory(before, after, diff) {
       await addDoc(historyCol, {
         player: PLAYER_ID,
@@ -186,7 +187,7 @@
       });
     }
 
-    /* ✅ タブを閉じる（確実に閉じる版） */
+    /* ✅ タブを閉じる */
     function scheduleCloseTab() {
       document.getElementById("closingMsg").style.display = "block";
 
@@ -206,8 +207,6 @@
 
       await setDoc(playerRef, { value: after });
       await saveHistory(before, after, diff);
-
-      // ✅ 表示更新は onSnapshot に任せる
 
       scheduleCloseTab();
     }

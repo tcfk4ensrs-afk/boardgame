@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ルール干渉（値半減チャンス）</title>
+  <title>ルール干渉（値半減チャンス + 計算 + フィルタ）</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -59,7 +59,6 @@
       box-shadow: 0 0 10px #ffeb3b;
     }
 
-    /* ✅ 成功アニメーション */
     .success-anim {
       font-size: 1.6em;
       color: #ffeb3b;
@@ -88,22 +87,57 @@
       to { opacity: 1; }
     }
 
+    .result-box {
+      margin-top: 15px;
+      font-size: 1.2em;
+      color: #ffeb3b;
+    }
   </style>
 </head>
 <body>
 
-  <h1>🎯 値半減チャンス</h1>
+  <h1>🎯 ルール干渉ページ</h1>
 
+  <!-- ✅ 値半減チャンス -->
   <div class="section">
+    <h2>値半減チャンス</h2>
+
     <label>対象プレイヤー</label>
     <select id="playerSelect"></select>
 
     <label>当てる数字（1〜100）</label>
-    <input type="number" id="guessNumber" min="1" max="100" placeholder="例：42">
+    <input type="number" id="guessNumber" min="1" max="100">
 
     <button id="applyBtn">判定する</button>
 
     <div id="resultArea"></div>
+  </div>
+
+  <!-- ✅ プレイヤー2人の計算 -->
+  <div class="section">
+    <h2>プレイヤー計算（和・差・積）</h2>
+
+    <label>プレイヤーA</label>
+    <select id="calcA"></select>
+
+    <label>プレイヤーB</label>
+    <select id="calcB"></select>
+
+    <button id="calcBtn">計算する</button>
+
+    <div id="calcResult" class="result-box"></div>
+  </div>
+
+  <!-- ✅ 指定値より大きいプレイヤー一覧 -->
+  <div class="section">
+    <h2>値フィルタ（指定値より大きい）</h2>
+
+    <label>しきい値</label>
+    <input type="number" id="filterValue" min="1">
+
+    <button id="filterBtn">検索する</button>
+
+    <div id="filterResult" class="result-box"></div>
   </div>
 
   <!-- ✅ Firebase SDK -->
@@ -138,15 +172,18 @@
       if (!snap.exists()) return;
 
       const count = snap.data().playerCount;
-      const sel = document.getElementById("playerSelect");
-      sel.innerHTML = "";
 
-      for (let i = 1; i <= count; i++) {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = `プレイヤー${i}`;
-        sel.appendChild(opt);
-      }
+      const selects = ["playerSelect", "calcA", "calcB"];
+      selects.forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = "";
+        for (let i = 1; i <= count; i++) {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = `プレイヤー${i}`;
+          sel.appendChild(opt);
+        }
+      });
     }
 
     /* ✅ プレイヤー値取得 */
@@ -173,7 +210,7 @@
       });
     }
 
-    /* ✅ 判定処理 */
+    /* ✅ 値半減チャンス */
     document.getElementById("applyBtn").onclick = async () => {
       const playerId = Number(document.getElementById("playerSelect").value);
       const guess = Number(document.getElementById("guessNumber").value);
@@ -204,6 +241,51 @@
           <p>正解：${correctNumber}</p>
         `;
       }
+    };
+
+    /* ✅ プレイヤー2人の計算 */
+    document.getElementById("calcBtn").onclick = async () => {
+      const a = Number(document.getElementById("calcA").value);
+      const b = Number(document.getElementById("calcB").value);
+
+      const vA = await getPlayerValue(a);
+      const vB = await getPlayerValue(b);
+
+      const result = `
+        和：${vA + vB}<br>
+        差：${vA - vB}<br>
+        積：${vA * vB}
+      `;
+
+      document.getElementById("calcResult").innerHTML = result;
+    };
+
+    /* ✅ 指定値より大きいプレイヤー一覧 */
+    document.getElementById("filterBtn").onclick = async () => {
+      const threshold = Number(document.getElementById("filterValue").value);
+      const resultBox = document.getElementById("filterResult");
+      resultBox.innerHTML = "";
+
+      if (!threshold) {
+        alert("しきい値を入力してください。");
+        return;
+      }
+
+      const players = await getDocs(playersCol);
+      const list = [];
+
+      players.forEach(doc => {
+        const id = Number(doc.id);
+        const value = doc.data().value;
+        if (value > threshold) {
+          list.push(`プレイヤー${id}（${value}）`);
+        }
+      });
+
+      resultBox.innerHTML =
+        list.length > 0
+          ? list.join("<br>")
+          : "該当するプレイヤーはいません。";
     };
 
     loadPlayers();

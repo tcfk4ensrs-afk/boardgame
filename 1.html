@@ -107,118 +107,108 @@
     入力を保存しました。5秒後にタブを閉じます…
   </div>
 
-  <script type="module">
-    /* ✅ Firebase SDK 読み込み */
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import {
-      getFirestore, doc, getDoc, setDoc, updateDoc,
-      onSnapshot, collection, addDoc, getDocs
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+ <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getFirestore, doc, getDoc, setDoc,
+    onSnapshot, collection, addDoc
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    /* ✅ Firebase 設定 */
-    const firebaseConfig = {
-      apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
-      authDomain: "sanrentan-6adc0.firebaseapp.com",
-      projectId: "sanrentan-6adc0",
-      storageBucket: "sanrentan-6adc0.firebasestorage.app",
-      messagingSenderId: "920208181022",
-      appId: "1:920208181022:web:bb3a050055fb9a40782b0f",
-      measurementId: "G-43N8MYJW96"
-    };
+  const firebaseConfig = { …あなたの設定… };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const PLAYER_ID = 1;
+  const playerRef = doc(db, "players", String(PLAYER_ID));
+  const settingsRef = doc(db, "settings", "global");
+  const historyCol = collection(db, "history");
 
-    /* ✅ このページのプレイヤーID */
-    const PLAYER_ID = 1;
+  /* ✅ リアルタイムで値を取得 */
+  onSnapshot(playerRef, (snap) => {
+    if (snap.exists()) {
+      document.getElementById("currentValue").textContent = snap.data().value;
+    }
+  });
 
-    /* ✅ Firestore 参照 */
-    const playerRef = doc(db, "players", String(PLAYER_ID));
-    const settingsRef = doc(db, "settings", "global");
-    const historyCol = collection(db, "history");
+  /* ✅ 順位計算 */
+  async function calcRank() {
+    const settingsSnap = await getDoc(settingsRef);
+    if (!settingsSnap.exists()) return;
 
-    /* ✅ Firestore からリアルタイムで値を取得 */
-    onSnapshot(playerRef, (snap) => {
-      if (snap.exists()) {
-        document.getElementById("currentValue").textContent = snap.data().value;
-      }
+    const playerCount = settingsSnap.data().playerCount;
+    const values = [];
+
+    for (let i = 1; i <= playerCount; i++) {
+      const snap = await getDoc(doc(db, "players", String(i)));
+      values.push(snap.exists() ? snap.data().value : 5);
+    }
+
+    const mySnap = await getDoc(playerRef);
+    const myValue = mySnap.exists() ? mySnap.data().value : 5;
+
+    const sorted = [...values].sort((a, b) => b - a);
+    const rank = sorted.indexOf(myValue) + 1;
+
+    document.getElementById("currentRank").textContent =
+      `${rank} 位 / ${playerCount} 人`;
+  }
+
+  /* ✅ 履歴保存 */
+  async function saveHistory(before, after, diff) {
+    await addDoc(historyCol, {
+      player: PLAYER_ID,
+      before,
+      after,
+      diff,
+      time: new Date().toLocaleString(),
+      penalty: false
     });
+  }
 
-    /* ✅ 順位計算（Firestoreから全プレイヤー値を取得） */
-    async function calcRank() {
-      const settingsSnap = await getDoc(settingsRef);
-      if (!settingsSnap.exists()) return;
-
-      const playerCount = settingsSnap.data().playerCount;
-
-      const values = [];
-      for (let i = 1; i <= playerCount; i++) {
-        const snap = await getDoc(doc(db, "players", String(i)));
-        values.push(snap.exists() ? snap.data().value : 5);
-      }
-
-      const mySnap = await getDoc(playerRef);
-      const myValue = mySnap.exists() ? mySnap.data().value : 5;
-
-      const sorted = [...values].sort((a, b) => b - a);
-      const rank = sorted.indexOf(myValue) + 1;
-
-      document.getElementById("currentRank").textContent =
-        `${rank} 位 / ${playerCount} 人`;
-    }
-
-    /* ✅ 履歴保存 */
-    async function saveHistory(before, after, diff) {
-      await addDoc(historyCol, {
-        player: PLAYER_ID,
-        before,
-        after,
-        diff,
-        time: new Date().toLocaleString(),
-        penalty: false
-      });
-    }
-
-    /* ✅ ボタン無効化 */
-    function disableButtons() {
-      document.querySelectorAll("button[data-diff]").forEach(btn => {
-        btn.disabled = true;
-      });
-    }
-
-    /* ✅ タブを閉じる */
-    function scheduleCloseTab() {
-      document.getElementById("closingMsg").style.display = "block";
-      setTimeout(() => window.close(), 5000);
-    }
-
-    /* ✅ 値変更処理 */
-    async function onButtonClick(diff) {
-      disableButtons();
-
-      const snap = await getDoc(playerRef);
-      const before = snap.exists() ? snap.data().value : 5;
-      const after = before + diff;
-
-      await setDoc(playerRef, { value: after });
-      await saveHistory(before, after, diff);
-
-      document.getElementById("currentValue").textContent = after;
-
-      scheduleCloseTab();
-    }
-
-    /* ✅ ボタンイベント登録 */
+  /* ✅ ボタン無効化 */
+  function disableButtons() {
     document.querySelectorAll("button[data-diff]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const diff = parseInt(btn.getAttribute("data-diff"), 10);
-        onButtonClick(diff);
-      });
+      btn.disabled = true;
     });
+  }
 
-    /* ✅ 初期表示 */
-    calcRank();
-  </script>
+  /* ✅ タブを閉じる（確実に閉じる版） */
+  function scheduleCloseTab() {
+    document.getElementById("closingMsg").style.display = "block";
+
+    setTimeout(() => {
+      window.open('', '_self');
+      window.close();
+    }, 5000);
+  }
+
+  /* ✅ 値変更処理 */
+  async function onButtonClick(diff) {
+    disableButtons();
+
+    const snap = await getDoc(playerRef);
+    const before = snap.exists() ? snap.data().value : 5;
+    const after = before + diff;
+
+    await setDoc(playerRef, { value: after });
+    await saveHistory(before, after, diff);
+
+    // ✅ UI 更新は onSnapshot に任せる
+
+    scheduleCloseTab();
+  }
+
+  /* ✅ ボタンイベント登録 */
+  document.querySelectorAll("button[data-diff]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const diff = parseInt(btn.getAttribute("data-diff"), 10);
+      onButtonClick(diff);
+    });
+  });
+
+  calcRank();
+</script>
+
 
 </body>
 </html>

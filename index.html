@@ -218,17 +218,40 @@
       });
     };
 
-    /* ✅ ロック解除 */
-    document.getElementById("resetBtn").onclick = async () => {
-      if (!confirm("人数と上限値のロックを解除しますか？")) return;
+  /* ✅ ロック解除 + 全データリセット */
+document.getElementById("resetBtn").onclick = async () => {
+  if (!confirm("人数・上限値のロック解除と、全データの初期化を行いますか？")) return;
 
-      await updateDoc(settingsRef, {
-        lockPlayerCount: false,
-        lockMaxTotal: false
-      });
+  const settingsSnap = await getDoc(settingsRef);
+  const count = settingsSnap.data().playerCount;
 
-      alert("ロックを解除しました");
-    };
+  /* ✅ 1. プレイヤーの値をすべて 5 に戻す */
+  for (let i = 1; i <= count; i++) {
+    await setDoc(doc(db, "players", String(i)), { value: 5 });
+  }
+
+  /* ✅ 2. history コレクションを全削除 */
+  const historySnap = await getDocs(historyCol);
+  for (const d of historySnap.docs) {
+    await deleteDoc(doc(db, "history", d.id));
+  }
+
+  /* ✅ 3. trifecta（result）コレクションを全削除 */
+  const trifectaCol = collection(db, "trifecta");
+  const trifectaSnap = await getDocs(trifectaCol);
+  for (const d of trifectaSnap.docs) {
+    await deleteDoc(doc(db, "trifecta", d.id));
+  }
+
+  /* ✅ 4. settings のロック解除 */
+  await updateDoc(settingsRef, {
+    lockPlayerCount: false,
+    lockMaxTotal: false
+  });
+
+  alert("✅ 全データを初期化し、ロックを解除しました");
+};
+
   </script>
 
 </body>

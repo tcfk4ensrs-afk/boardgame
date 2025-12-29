@@ -151,16 +151,7 @@
         `現在の上限値：${data.maxTotal}`;
 
       // ✅ ロック状態に応じて UI を無効化
-      document.getElementById("playerCount").disabled = data.lockPlayerCount;
-      document.getElementById("savePlayerCount").disabled = data.lockPlayerCount;
-
-      document.getElementById("maxTotal").disabled = data.lockMaxTotal;
-      document.getElementById("saveMaxTotal").disabled = data.lockMaxTotal;
-
-      renderPlayers(data.playerCount);
-      updateTotalDisplay();
-    });
-
+      
     /* ✅ プレイヤー一覧表示 */
     async function renderPlayers(count) {
       const list = document.getElementById("playerList");

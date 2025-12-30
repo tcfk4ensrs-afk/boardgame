@@ -80,7 +80,7 @@
 
   <h1>🏇 3連単ゲーム（Firebase版）</h1>
 
-  <!-- ✅ プレイヤー人数設定 -->
+  <!-- プレイヤー人数設定 -->
   <div class="section">
     <label>参加プレイヤー人数</label>
     <input type="number" id="playerCount" min="1" max="20">
@@ -88,7 +88,7 @@
     <p id="playerCountDisplay" style="margin-top:10px;"></p>
   </div>
 
-  <!-- ✅ 上限値設定 -->
+  <!-- 上限値設定 -->
   <div class="section">
     <label>合計数字の上限値</label>
     <input type="number" id="maxTotal" min="1">
@@ -96,29 +96,29 @@
     <p id="maxTotalDisplay" style="margin-top:10px;"></p>
   </div>
 
-  <!-- ✅ 合計値表示 -->
+  <!-- 合計値表示 -->
   <div class="section">
     <p>現在の合計値：<span id="currentTotal">-</span></p>
     <p id="maxTotalLabel"></p>
   </div>
 
-  <!-- ✅ プレイヤー一覧 -->
+  <!-- プレイヤー一覧 -->
   <div id="playerList"></div>
 
-  <!-- ✅ リセット -->
+  <!-- リセット -->
   <div class="section">
     <button id="resetBtn">ロック解除（人数・上限）</button>
   </div>
 
-  <!-- ✅ Firebase SDK -->
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore, doc, getDoc, setDoc, updateDoc,
-      onSnapshot, collection, getDocs
+      onSnapshot, collection, getDocs, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    /* ✅ Firebase 設定 */
+    /* Firebase 設定 */
     const firebaseConfig = {
       apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
       authDomain: "sanrentan-6adc0.firebaseapp.com",
@@ -134,8 +134,9 @@
 
     const settingsRef = doc(db, "settings", "global");
     const playersCol = collection(db, "players");
+    const historyCol = collection(db, "history");  // ← 追加
 
-    /* ✅ Firestore 設定をリアルタイムで読み込む */
+    /* Firestore 設定をリアルタイムで読み込む */
     onSnapshot(settingsRef, (snap) => {
       if (!snap.exists()) return;
 
@@ -150,9 +151,11 @@
       document.getElementById("maxTotalDisplay").textContent =
         `現在の上限値：${data.maxTotal}`;
 
-      // ✅ ロック状態に応じて UI を無効化
-      
-    /* ✅ プレイヤー一覧表示 */
+      renderPlayers(data.playerCount);
+      updateTotalDisplay();
+    });  // ← ここで閉じるのが正しい
+
+    /* プレイヤー一覧表示 */
     async function renderPlayers(count) {
       const list = document.getElementById("playerList");
       list.innerHTML = "";
@@ -168,14 +171,14 @@
       }
     }
 
-    /* ✅ プレイヤー値取得 */
+    /* プレイヤー値取得 */
     async function getPlayerValue(id) {
       const ref = doc(db, "players", String(id));
       const snap = await getDoc(ref);
       return snap.exists() ? snap.data().value : 5;
     }
 
-    /* ✅ 合計値表示 */
+    /* 合計値表示 */
     async function updateTotalDisplay() {
       const settingsSnap = await getDoc(settingsRef);
       if (!settingsSnap.exists()) return;
@@ -191,7 +194,7 @@
       document.getElementById("maxTotalLabel").textContent = `上限：${maxTotal}`;
     }
 
-    /* ✅ 人数確定（ロック） */
+    /* 人数確定（ロック） */
     document.getElementById("savePlayerCount").onclick = async () => {
       const count = Number(document.getElementById("playerCount").value);
       await updateDoc(settingsRef, {
@@ -200,7 +203,7 @@
       });
     };
 
-    /* ✅ 上限確定（ロック） */
+    /* 上限確定（ロック） */
     document.getElementById("saveMaxTotal").onclick = async () => {
       const max = Number(document.getElementById("maxTotal").value);
       await updateDoc(settingsRef, {
@@ -209,39 +212,39 @@
       });
     };
 
-  /* ✅ ロック解除 + 全データリセット */
-document.getElementById("resetBtn").onclick = async () => {
-  if (!confirm("人数・上限値のロック解除と、全データの初期化を行いますか？")) return;
+    /* ロック解除 + 全データリセット */
+    document.getElementById("resetBtn").onclick = async () => {
+      if (!confirm("人数・上限値のロック解除と、全データの初期化を行いますか？")) return;
 
-  const settingsSnap = await getDoc(settingsRef);
-  const count = settingsSnap.data().playerCount;
+      const settingsSnap = await getDoc(settingsRef);
+      const count = settingsSnap.data().playerCount;
 
-  /* ✅ 1. プレイヤーの値をすべて 5 に戻す */
-  for (let i = 1; i <= count; i++) {
-    await setDoc(doc(db, "players", String(i)), { value: 5 });
-  }
+      /* 1. プレイヤーの値をすべて 5 に戻す */
+      for (let i = 1; i <= count; i++) {
+        await setDoc(doc(db, "players", String(i)), { value: 5 });
+      }
 
-  /* ✅ 2. history コレクションを全削除 */
-  const historySnap = await getDocs(historyCol);
-  for (const d of historySnap.docs) {
-    await deleteDoc(doc(db, "history", d.id));
-  }
+      /* 2. history コレクションを全削除 */
+      const historySnap = await getDocs(historyCol);
+      for (const d of historySnap.docs) {
+        await deleteDoc(doc(db, "history", d.id));
+      }
 
-  /* ✅ 3. trifecta（result）コレクションを全削除 */
-  const trifectaCol = collection(db, "trifecta");
-  const trifectaSnap = await getDocs(trifectaCol);
-  for (const d of trifectaSnap.docs) {
-    await deleteDoc(doc(db, "trifecta", d.id));
-  }
+      /* 3. trifecta（result）コレクションを全削除 */
+      const trifectaCol = collection(db, "trifecta");
+      const trifectaSnap = await getDocs(trifectaCol);
+      for (const d of trifectaSnap.docs) {
+        await deleteDoc(doc(db, "trifecta", d.id));
+      }
 
-  /* ✅ 4. settings のロック解除 */
-  await updateDoc(settingsRef, {
-    lockPlayerCount: false,
-    lockMaxTotal: false
-  });
+      /* 4. settings のロック解除 */
+      await updateDoc(settingsRef, {
+        lockPlayerCount: false,
+        lockMaxTotal: false
+      });
 
-  alert("✅ 全データを初期化し、ロックを解除しました");
-};
+      alert("全データを初期化し、ロックを解除しました");
+    };
 
   </script>
 

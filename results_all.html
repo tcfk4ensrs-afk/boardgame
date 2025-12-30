@@ -22,7 +22,6 @@
       letter-spacing: 1px;
     }
 
-    /* ✅ 共通の枠デザイン */
     .box {
       width: 95%;
       max-width: 600px;
@@ -34,13 +33,11 @@
       box-shadow: 0 0 15px rgba(255, 235, 59, 0.5);
     }
 
-    /* ✅ 最初の3着枠 */
     .first-reveal-box h2 {
       font-size: 1.5em;
       margin-bottom: 10px;
     }
 
-    /* ✅ 順位表示 */
     .rank-line {
       font-size: 1.4em;
       margin: 10px 0;
@@ -54,7 +51,6 @@
       transform: translateY(0);
     }
 
-    /* ✅ 履歴一覧 */
     .item {
       border-bottom: 1px solid #555;
       padding: 12px 5px;
@@ -112,13 +108,11 @@
 
   <h1>🏇 全員の結果一覧</h1>
 
-  <!-- ✅ 最初に表示する3着だけの枠（最初は非表示） -->
   <div class="box first-reveal-box" id="firstRevealBox" style="display:none;">
     <h2>🎯 まずは3着！</h2>
     <div id="firstRank3" class="rank-line">3着：</div>
   </div>
 
-  <!-- ✅ 3連単の全順位（段階公開） -->
   <div class="box" id="correctBox">
     <h2>🎯 正解の3連単</h2>
     <div id="rank1" class="rank-line">1着：</div>
@@ -126,22 +120,22 @@
     <div id="rank3" class="rank-line">3着：</div>
   </div>
 
-  <!-- ✅ 履歴一覧 -->
   <div class="box" id="resultBoard" style="display:none;"></div>
 
   <div class="btn-area">
     <button class="btn" onclick="location.href='index.html'">ホームに戻る</button>
     <button class="btn btn-danger" onclick="clearHistory()">履歴をすべて削除</button>
+
+    <!-- ▼ 追加：LocalStorage削除ボタン -->
+    <button class="btn btn-danger" onclick="clearLocalHistory()">ローカル履歴を削除</button>
   </div>
 
-  <!-- ✅ Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore, doc, getDoc, collection, getDocs, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    /* ✅ Firebase 設定 */
     const firebaseConfig = {
       apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
       authDomain: "sanrentan-6adc0.firebaseapp.com",
@@ -159,7 +153,6 @@
     const playersCol = collection(db, "players");
     const trifectaCol = collection(db, "trifecta");
 
-    /* ✅ 同着判定ロジック（省略：あなたの元コードそのまま） */
     function isHitWithTies(pred, actual, values) {
       const v = {};
       values.forEach(p => v[p.id] = p.value);
@@ -191,7 +184,6 @@
       );
     }
 
-    /* ✅ Firestore から全データを読み込む */
     async function loadAllResults() {
       const board = document.getElementById("resultBoard");
 
@@ -214,11 +206,9 @@
       const v2 = values[1].value;
       const v3 = values[2].value;
 
-      /* ✅ 最初の3着枠にセット */
       document.getElementById("firstRank3").textContent =
         `3着：プレイヤー${actual3} ${v2===v3 ? "（同着）" : ""}`;
 
-      /* ✅ 正解の3連単（correctBox） */
       document.getElementById("rank1").textContent =
         `1着：プレイヤー${actual1} ${v1===v2 ? "（同着）" : ""}`;
       document.getElementById("rank2").textContent =
@@ -226,7 +216,6 @@
       document.getElementById("rank3").textContent =
         `3着：プレイヤー${actual3} ${v2===v3 ? "（同着）" : ""}`;
 
-      /* ✅ 予想履歴 */
       const trifectaSnap = await getDocs(trifectaCol);
       const history = [];
       trifectaSnap.forEach(doc => history.push(doc.data()));
@@ -260,7 +249,6 @@
       setupTapReveal();
     }
 
-    /* ✅ タップで段階公開 */
     let step = 0;
 
     function setupTapReveal() {
@@ -293,7 +281,6 @@
       });
     }
 
-    /* ✅ 履歴削除 */
     async function clearHistory() {
       if (!confirm("本当に履歴をすべて削除しますか？")) return;
 
@@ -307,6 +294,18 @@
     }
 
     window.clearHistory = clearHistory;
+
+    /* ▼ 追加：LocalStorage削除機能 */
+    function clearLocalHistory() {
+      if (!confirm("この端末に保存されたローカル履歴を削除しますか？")) return;
+
+      localStorage.removeItem("history_all_players");
+
+      alert("ローカル履歴を削除しました");
+      location.reload();
+    }
+
+    window.clearLocalHistory = clearLocalHistory;
 
     loadAllResults();
   </script>

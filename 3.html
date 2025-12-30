@@ -94,12 +94,13 @@
     <div id="currentRank">-</div>
   </div>
 
+  <!-- 🔢 ボタン変更済み -->
   <div class="btn-area">
+    <button data-diff="-11">-11</button>
     <button data-diff="-3">-3</button>
-    <button data-diff="-2">-2</button>
     <button data-diff="-1">-1</button>
-    <button data-diff="1">+1</button>
-    <button data-diff="3">+3</button>
+    <button data-diff="2">+2</button>
+    <button data-diff="4">+4</button>
     <button data-diff="10">+10</button>
   </div>
 
@@ -107,15 +108,21 @@
     入力を保存しました。5秒後にタブを閉じます…
   </div>
 
+  <!-- ▼ LocalStorage 履歴表示エリア -->
+  <div class="value-box" style="margin-top:30px;">
+    <p>ローカル履歴（全プレイヤー共通）</p>
+    <div id="localHistory"></div>
+  </div>
+
   <script type="module">
-    /* ✅ Firebase SDK 読み込み */
+    /* Firebase SDK 読み込み */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
       getFirestore, doc, getDoc, setDoc,
       onSnapshot, collection, addDoc
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    /* ✅ Firebase 設定 */
+    /* Firebase 設定 */
     const firebaseConfig = {
       apiKey: "AIzaSyA60JGwkkQ4HbN6G7yPqhK_tPXFVE7GA0U",
       authDomain: "sanrentan-6adc0.firebaseapp.com",
@@ -129,22 +136,23 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    /* ✅ このページのプレイヤーID */
+    /* このページのプレイヤーID */
     const PLAYER_ID = 3;
 
-    /* ✅ Firestore 参照 */
+    /* Firestore 参照 */
     const playerRef = doc(db, "players", String(PLAYER_ID));
     const settingsRef = doc(db, "settings", "global");
     const historyCol = collection(db, "history");
 
-    /* ✅ Firestore からリアルタイムで値を取得 */
+    /* Firestore からリアルタイムで値を取得 */
     onSnapshot(playerRef, (snap) => {
       if (snap.exists()) {
         document.getElementById("currentValue").textContent = snap.data().value;
+        calcRank();
       }
     });
 
-    /* ✅ 順位計算 */
+    /* 順位計算 */
     async function calcRank() {
       const settingsSnap = await getDoc(settingsRef);
       if (!settingsSnap.exists()) return;
@@ -167,7 +175,7 @@
         `${rank} 位 / ${playerCount} 人`;
     }
 
-    /* ✅ 履歴保存 */
+    /* Firebase 履歴保存 */
     async function saveHistory(before, after, diff) {
       await addDoc(historyCol, {
         player: PLAYER_ID,
@@ -179,14 +187,47 @@
       });
     }
 
-    /* ✅ ボタン無効化 */
+    /* LocalStorage 履歴保存（全プレイヤー共通） */
+    function saveLocalHistory(playerId, before, after, diff) {
+      const list = JSON.parse(localStorage.getItem("history_all_players") || "[]");
+
+      list.push({
+        player: playerId,
+        time: new Date().toLocaleString(),
+        before,
+        after,
+        diff
+      });
+
+      localStorage.setItem("history_all_players", JSON.stringify(list));
+    }
+
+    /* LocalStorage 履歴表示 */
+    function renderLocalHistory() {
+      const area = document.getElementById("localHistory");
+      const list = JSON.parse(localStorage.getItem("history_all_players") || "[]");
+
+      if (list.length === 0) {
+        area.innerHTML = "<p>まだ履歴がありません。</p>";
+        return;
+      }
+
+      area.innerHTML = list.map(item => `
+        <div style="border-bottom:1px solid #666; padding:5px 0;">
+          <strong>${item.time}</strong><br>
+          プレイヤー${item.player}： ${item.before} → ${item.after}（${item.diff > 0 ? "+" : ""}${item.diff}）
+        </div>
+      `).join("");
+    }
+
+    /* ボタン無効化 */
     function disableButtons() {
       document.querySelectorAll("button[data-diff]").forEach(btn => {
         btn.disabled = true;
       });
     }
 
-    /* ✅ タブを閉じる（確実に閉じる版） */
+    /* タブを閉じる */
     function scheduleCloseTab() {
       document.getElementById("closingMsg").style.display = "block";
 
@@ -196,7 +237,7 @@
       }, 5000);
     }
 
-    /* ✅ 値変更処理 */
+    /* 値変更処理 */
     async function onButtonClick(diff) {
       disableButtons();
 
@@ -206,13 +247,14 @@
 
       await setDoc(playerRef, { value: after });
       await saveHistory(before, after, diff);
+      saveLocalHistory(PLAYER_ID, before, after, diff);  // ← 追加
 
-      // ✅ 表示更新は onSnapshot に任せる
+      renderLocalHistory(); // ← 画面更新
 
       scheduleCloseTab();
     }
 
-    /* ✅ ボタンイベント登録 */
+    /* ボタンイベント登録 */
     document.querySelectorAll("button[data-diff]").forEach(btn => {
       btn.addEventListener("click", () => {
         const diff = parseInt(btn.getAttribute("data-diff"), 10);
@@ -220,8 +262,9 @@
       });
     });
 
-    /* ✅ 初期表示 */
+    /* 初期表示 */
     calcRank();
+    renderLocalHistory();
   </script>
 
 </body>

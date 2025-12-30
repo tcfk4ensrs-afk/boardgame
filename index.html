@@ -224,11 +224,14 @@
         await setDoc(doc(db, "players", String(i)), { value: 5 });
       }
 
-      /* 2. history コレクションを全削除 */
-      const historySnap = await getDocs(historyCol);
-      for (const d of historySnap.docs) {
-        await deleteDoc(doc(db, "history", d.id));
-      }
+   /* 2. history コレクションを全削除 */
+const historyCol = collection(db, "history");  // ← ここで定義
+const historySnap = await getDocs(historyCol);
+
+for (const d of historySnap.docs) {
+  await deleteDoc(doc(db, "history", d.id));
+}
+
 
       /* 3. trifecta（result）コレクションを全削除 */
       const trifectaCol = collection(db, "trifecta");

@@ -134,7 +134,8 @@
 
     const settingsRef = doc(db, "settings", "global");
     const playersCol = collection(db, "players");
-    const historyCol = collection(db, "history");  // ← 追加
+    const historyCol = collection(db, "history");   // ← 正しい位置
+    const trifectaCol = collection(db, "trifecta");
 
     /* Firestore 設定をリアルタイムで読み込む */
     onSnapshot(settingsRef, (snap) => {
@@ -153,7 +154,7 @@
 
       renderPlayers(data.playerCount);
       updateTotalDisplay();
-    });  // ← ここで閉じるのが正しい
+    });
 
     /* プレイヤー一覧表示 */
     async function renderPlayers(count) {
@@ -224,17 +225,13 @@
         await setDoc(doc(db, "players", String(i)), { value: 5 });
       }
 
-   /* 2. history コレクションを全削除 */
-const historyCol = collection(db, "history");  // ← ここで定義
-const historySnap = await getDocs(historyCol);
+      /* 2. history コレクションを全削除 */
+      const historySnap = await getDocs(historyCol);
+      for (const d of historySnap.docs) {
+        await deleteDoc(doc(db, "history", d.id));
+      }
 
-for (const d of historySnap.docs) {
-  await deleteDoc(doc(db, "history", d.id));
-}
-
-
-      /* 3. trifecta（result）コレクションを全削除 */
-      const trifectaCol = collection(db, "trifecta");
+      /* 3. trifecta コレクションを全削除 */
       const trifectaSnap = await getDocs(trifectaCol);
       for (const d of trifectaSnap.docs) {
         await deleteDoc(doc(db, "trifecta", d.id));
